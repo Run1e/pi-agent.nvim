@@ -1,0 +1,79 @@
+local M = {}
+
+M.tab_id = nil
+M.pane_id = nil
+
+-- TODO: double-check all of these failure paths (do we always get json.error with .message?)
+
+function M.new(opts) end
+
+function M.open(pi)
+	M.tab_id = nil
+	M.pane_id = nil
+
+	local result = vim.fn.system({
+		"herdr",
+		"tab",
+		"create",
+		"--focus",
+		"--cwd",
+		vim.fn.getcwd(),
+	})
+
+	local json = vim.json.decode(result)
+	if not json or not json.result or not json.result.root_pane then
+		vim.notify("Failed to create Herdr tab", vim.log.levels.ERROR)
+		return false
+	end
+
+	M.tab_id = json.result.tab.tab_id
+	M.pane_id = json.result.root_pane.pane_id
+	result = vim.fn.system({
+		"herdr",
+		"pane",
+		"run",
+		M.pane_id,
+		"pi",
+		"-e",
+		pi.get_extension_path(),
+		"--session-id",
+		pi.session_name,
+	})
+	-- TODO: check here also
+
+	return true
+end
+
+function M.close()
+	vim.schedule(function()
+		result = vim.fn.system({ "herdr", "tab", "close", M.tab_id })
+		M.tab_id = nil
+		M.pane_id = nil
+	end)
+
+	return true
+end
+
+function M.focus()
+	if M.tab_id == nil or M.pane_id == nil then
+		return false
+	end
+
+	local result = vim.fn.system({
+		"herdr",
+		"tab",
+		"focus",
+		M.tab_id,
+	})
+
+	local json = vim.json.decode(result)
+
+	if json.error ~= nil then
+		vim.notify("herdr tab focus failed: " .. json.error.message, vim.log.levels.warn)
+		return false
+	end
+
+	return true
+end
+
+return M
