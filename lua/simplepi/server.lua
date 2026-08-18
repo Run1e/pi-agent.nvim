@@ -17,7 +17,12 @@ function M.start(path, on_connect, on_disconnect, on_message)
 	os.remove(path)
 
 	M.pipe = vim.uv.new_pipe(false)
+
 	M.pipe:bind(path)
+	if vim.uv.fs_chmod(path, tonumber("600", 8)) ~= true then
+		vim.notify("Failed to chmod 600 socket file?", vim.log.levels.WARN)
+	end
+
 	M.pipe:listen(1, M.on_accept)
 	M.pipe:unref()
 end

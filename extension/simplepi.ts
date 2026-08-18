@@ -6,6 +6,7 @@ import type {
 import type { Protocol, Command } from "./handlers.ts";
 import { handlers } from "./handlers.ts";
 
+import { accessSync, constants, mkdirSync } from "fs";
 import { createConnection, Socket } from "net";
 
 let client: Socket | null = null;
@@ -22,6 +23,30 @@ function getSessionName(): string {
   }
 
   return process.argv[sessionIdIdx + 1];
+}
+
+function getSocketDir(): string {
+  // use /tmp if runtime dir doesn't pan out
+  let tmpDir = "/tmp";
+
+  let idealDir = process.env.XDG_RUNTIME_DIR;
+  if (!idealDir || !idealDir.length) {
+    return tmpDir;
+  }
+
+  try {
+    accessSync(idealDir, constants.W_OK);
+  } catch {
+    return tmpDir;
+  }
+
+  idealDir += "/simple-pi";
+  try {
+    accessSync(idealDir, constants.W_OK);
+    return idealDir;
+  } catch {
+    return tmpDir;
+  }
 }
 
 function getClient(): Socket {
@@ -49,8 +74,9 @@ function getPi(): ExtensionAPI {
 }
 
 function createClient() {
-  client = createConnection({ path: "/tmp/" + getSessionName() }, () =>
-    getContext().ui.notify("Connected to Neovim! :D"),
+  client = createConnection(
+    { path: getSocketDir() + "/" + getSessionName() + ".sock" },
+    () => getContext().ui.notify("Connected to Neovim! :D"),
   );
 
   client.on("end", () => {

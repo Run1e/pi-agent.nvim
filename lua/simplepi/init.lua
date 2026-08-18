@@ -8,6 +8,27 @@ function M.make_session_name()
 	return string.format("simplepi-%s-%03d", os.date("%Y-%m-%dT%H-%M-%S"), vim.uv.now() % 1000)
 end
 
+local function get_socket_dir()
+	local tmp_dir = "/tmp"
+	local ideal_dir = os.getenv("XDG_RUNTIME_DIR")
+
+	if ideal_dir == nil or #ideal_dir == 0 or vim.uv.fs_access(ideal_dir, "w") ~= true then
+		vim.notify("... what?")
+		return tmp_dir
+	end
+
+	local ideal_dir = ideal_dir .. "/simple-pi"
+	vim.uv.fs_mkdir(ideal_dir, tonumber("700", 8))
+
+	-- fall back to base if we couldn't make it usable
+	if vim.uv.fs_access(ideal_dir, "w") ~= true then
+		vim.notify("failed fs_access")
+		return tmp_dir
+	end
+
+	return ideal_dir
+end
+
 function M.make_pi_launch_command()
 	return {
 		"pi",
@@ -34,7 +55,7 @@ function M.start()
 	end
 
 	M.session_name = M.make_session_name()
-	M.socket_path = "/tmp/" .. M.session_name
+	M.socket_path = get_socket_dir() .. "/" .. M.session_name .. ".sock"
 	server.start(M.socket_path, M.on_connect, M.on_disconnect, M.on_message)
 
 	config.opts.surface.open(M)
