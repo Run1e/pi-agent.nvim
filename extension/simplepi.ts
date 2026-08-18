@@ -16,8 +16,6 @@ export default function (pi: ExtensionAPI) {
       ctx.ui.notify("Connected to Neovim! :D");
     }
 
-    // pi.getSessionName() returns unknown even when we've set the session id with --session-id on launch.
-    // yikes
     const sessionIdIdx = process.argv.findIndex(
       (value) => value === "--session-id",
     );
@@ -33,7 +31,6 @@ export default function (pi: ExtensionAPI) {
 
     const sessionName = process.argv[sessionIdIdx + 1];
 
-    process.argv.forEach((val, index, arr) => {});
     client = createConnection({ path: "/tmp/" + sessionName }, onConnect);
 
     client.on("end", () => {

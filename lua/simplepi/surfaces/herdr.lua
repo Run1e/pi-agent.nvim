@@ -28,17 +28,17 @@ function M.open(pi)
 
 	M.tab_id = json.result.tab.tab_id
 	M.pane_id = json.result.root_pane.pane_id
-	result = vim.fn.system({
+
+	local cmd = {
 		"herdr",
 		"pane",
 		"run",
 		M.pane_id,
-		"pi",
-		"-e",
-		pi.get_extension_path(),
-		"--session-id",
-		pi.session_name,
-	})
+	}
+
+	vim.list_extend(cmd, pi.make_pi_launch_command())
+
+	result = vim.fn.system(cmd)
 	-- TODO: check here also
 
 	return true

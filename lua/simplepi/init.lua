@@ -8,6 +8,16 @@ function M.make_session_name()
 	return string.format("simplepi-%s-%03d", os.date("%Y-%m-%dT%H-%M-%S"), vim.uv.now() % 1000)
 end
 
+function M.make_pi_launch_command()
+	return {
+		"pi",
+		"-e",
+		M.get_extension_path(),
+		"--session-id",
+		M.session_name,
+	}
+end
+
 function M.setup(opts)
 	config.setup(opts)
 
@@ -102,11 +112,7 @@ function M.focus()
 		return false
 	end
 
-	if config.opts.surface.focus() then
-		return true
-	end
-
-	return false
+	return config.opts.surface.focus()
 end
 
 function M.paste_line_reference()
