@@ -56,8 +56,11 @@ function promote_client(client)
 			-- TODO: concern -- will we never call on_disconnect if client pipe is already closing?
 
 			if not client:is_closing() then
-				client:close(function()
+				if M.client == client then
 					M.client = nil
+				end
+
+				client:close(function()
 					pcall(M.on_disconnect)
 					maybe_promote_pending()
 				end)

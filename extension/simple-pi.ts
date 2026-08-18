@@ -6,7 +6,7 @@ import type {
 import type { Protocol, Command } from "./handlers.ts";
 import { handlers } from "./handlers.ts";
 
-import { accessSync, constants, mkdirSync } from "fs";
+import { accessSync, constants } from "fs";
 import { createConnection, Socket } from "net";
 
 let client: Socket | null = null;
@@ -141,7 +141,7 @@ function isCommand(msg: unknown): msg is Command {
 }
 
 function handleMessage(msg: unknown) {
-  if (!isCommand(msg)) {
+  if (!isCommand(msg) || !_pi || !_ctx) {
     return;
   }
 
@@ -149,12 +149,23 @@ function handleMessage(msg: unknown) {
 }
 
 export default function (pi: ExtensionAPI) {
-  pi.on("session_start", async (_event, ctx) => {
+  pi.on("session_start", async (event, ctx) => {
     _pi = pi;
     _ctx = ctx;
 
-    if (!client || client.destroyed) {
+    if (!client || client.destroyed || client.closed) {
       createClient();
     }
+  });
+
+  pi.on("session_shutdown", async (event, ctx) => {
+    if (event.reason === "quit") return;
+
+    if (client) {
+      client.destroy();
+    }
+
+    _pi = null;
+    _ctx = null;
   });
 }
