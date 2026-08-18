@@ -13,9 +13,9 @@ M.opts = vim.deepcopy(M.default_opts)
 M.tab_id = nil
 M.win_id = nil
 M.buf_id = nil
-M.job_id = nil
+M.chan_id = nil
 
-M.auto_insert_autocmd_id = nil
+M.autocmd_id = nil
 
 -- TODO: double-check all of these failure paths (do we always get json.error with .message?)
 
@@ -24,10 +24,10 @@ function M.setup(opts)
 
 	M.win_id = nil
 	M.buf_id = nil
-	M.job_id = nil
+	M.chan_id = nil
 
-	if M.opts.auto_insert_on_focus and M.auto_insert_autocmd_id == nil then
-		vim.api.nvim_create_autocmd("BufEnter", {
+	if M.opts.auto_insert_on_focus and M.autocmd_id == nil then
+		M.autocmd_id = vim.api.nvim_create_autocmd("BufEnter", {
 			callback = function()
 				vim.defer_fn(function()
 					-- just immediately insert in opencode windows I guess?
@@ -46,11 +46,9 @@ function M.setup(opts)
 				end, 16)
 			end,
 		})
-
-		M.auto_insert_autocmd_id = true
-	elseif M.auto_insert_autocmd_id ~= nil then
-		vim.api.nvim_del_autocmd(M.auto_insert_autocmd_id)
-		M.auto_insert_autocmd_id = nil
+	elseif M.autocmd_id ~= nil then
+		vim.api.nvim_del_autocmd(M.autocmd_id)
+		M.autocmd_id = nil
 	end
 
 	return M
@@ -64,30 +62,68 @@ function start_term()
 		term = true,
 	}
 
-	M.job_id = vim.fn.jobstart(require("simplepi").make_pi_launch_command(), jobstart_opts)
+	M.chan_id = vim.fn.jobstart(require("simplepi").make_pi_launch_command(), jobstart_opts)
+	-- TODO: return of < 1 means error, log it
+
+	vim.bo[M.buf_id].bufhidden = "hide"
+end
+
+function is_job_valid()
+	if M.chan_id == nil then
+		return false
+	end
+
+	local chan_info = vim.api.nvim_get_chan_info(M.chan_id)
+
+	-- check if dict returned is empty, if so not a valid job
+	if next(chan_info) == nil then
+		M.chan_id = nil
+		return false
+	end
+
+	if chan_info.buf == -1 or chan_info.exitcode ~= nil then
+		vim.fn.chanclose(M.chan_id)
+		M.chan_id = nil
+		return false
+	end
+
+	return true
 end
 
 function M.open(pi)
-	-- create a buffer if we don't have one
-	if M.buf_id == nil then
-		M.buf_id = vim.api.nvim_create_buf(false, true)
-		vim.bo[M.buf_id].filetype = "simplepi"
+	local has_valid_job = is_job_valid()
+
+	-- no valid job, handle buffer first
+	if not has_valid_job then
+		-- do NOT reuse buffers
+		if M.buf_id ~= nil then
+			vim.api.nvim_buf_delete(M.buf_id, { force = true })
+			M.buf_id = nil
+		end
+
+		-- create a buffer if we don't have one
+		if M.buf_id == nil then
+			M.buf_id = vim.api.nvim_create_buf(false, true)
+			vim.bo[M.buf_id].filetype = "simplepi"
+		end
 	end
 
+	-- create tab/window if needed and focus
 	M.focus()
 
-	if M.job_id == nil then
+	if not has_valid_job then
 		start_term()
 	end
-
-	-- now we gotta figure out if there's a window in the current tab that has this open? (for the window case anyway)
 
 	return true
 end
 
 function M.close()
 	vim.schedule(function()
-		vim.api.nvim_win_close(M.win_id, true)
+		if M.win_id ~= nil then
+			vim.api.nvim_win_close(M.win_id, true)
+			M.win_id = nil
+		end
 	end)
 
 	return true

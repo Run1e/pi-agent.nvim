@@ -2,6 +2,8 @@ local M = {}
 
 M.pipe = nil
 M.client = nil
+M.pending_client = nil
+
 M.path = nil
 M.on_connect = nil
 M.on_disconnect = nil
@@ -17,6 +19,7 @@ function M.start(path, on_connect, on_disconnect, on_message)
 	M.pipe = vim.uv.new_pipe(false)
 	M.pipe:bind(path)
 	M.pipe:listen(1, M.on_accept)
+	M.pipe:unref()
 end
 
 function M.is_active()
@@ -27,19 +30,31 @@ function M.is_active()
 	return M.client:is_active()
 end
 
-function M.on_accept()
-	M.client = vim.uv.new_pipe(false)
-	M.pipe:accept(M.client)
+function maybe_promote_pending()
+	if M.pending_client == nil then
+		return
+	end
+
+	local pending = M.pending_client
+	M.pending_client = nil
+	promote_client(pending)
+end
+
+function promote_client(client)
+	M.client = client
+	M.pending_client = nil
 
 	local buffer = ""
 
-	M.client:read_start(function(err, data)
+	client:read_start(function(err, data)
 		if err or data == nil or not data or data == "" then
 			-- TODO: concern -- will we never call on_disconnect if client pipe is already closing?
-			if not M.client:is_closing() then
-				M.client:close(function()
+
+			if not client:is_closing() then
+				client:close(function()
 					M.client = nil
-					M.on_disconnect()
+					pcall(M.on_disconnect)
+					maybe_promote_pending()
 				end)
 			end
 
@@ -69,8 +84,34 @@ function M.on_accept()
 	M.on_connect()
 end
 
+function M.on_accept()
+	local pending = vim.uv.new_pipe(false)
+	assert(pending)
+
+	M.pipe:accept(pending)
+
+	if M.client ~= nil then
+		-- immediately close if we have a healthy client
+		if M.is_active() then
+			pending:close()
+			return
+		end
+
+		if M.pending_client ~= nil then
+			-- already a pending client, just close this
+			pending:close()
+		else
+			M.pending_client = pending
+		end
+
+		return
+	end
+
+	promote_client(pending)
+end
+
 function M.send(data)
-	if M.client == nil then
+	if not M.is_active() then
 		return
 	end
 

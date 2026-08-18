@@ -109,7 +109,10 @@ end
 
 function M.on_disconnect()
 	vim.notify("Pi disconnected D:")
-	config.opts.surface.close()
+
+	if config.opts.close_on_disconnect then
+		config.opts.surface.close()
+	end
 end
 
 function M.ping()
