@@ -36,7 +36,7 @@ function M.setup(opts)
 					end
 
 					local buf_id = vim.api.nvim_get_current_buf()
-					if buf_id == M.buf_id and vim.bo[buf_id].filetype == "simplepi" then
+					if buf_id == M.buf_id and vim.bo[buf_id].filetype == "simple-pi" then
 						if vim.fn.mode() ~= "i" then
 							vim.cmd("startinsert")
 						end
@@ -62,7 +62,7 @@ function start_term()
 		term = true,
 	}
 
-	M.chan_id = vim.fn.jobstart(require("simplepi").make_pi_launch_command(), jobstart_opts)
+	M.chan_id = vim.fn.jobstart(require("simple-pi").make_pi_launch_command(), jobstart_opts)
 	-- TODO: return of < 1 means error, log it
 
 	vim.bo[M.buf_id].bufhidden = "hide"
@@ -104,7 +104,7 @@ function M.open(pi)
 		-- create a buffer if we don't have one
 		if M.buf_id == nil then
 			M.buf_id = vim.api.nvim_create_buf(false, true)
-			vim.bo[M.buf_id].filetype = "simplepi"
+			vim.bo[M.buf_id].filetype = "simple-pi"
 		end
 	end
 

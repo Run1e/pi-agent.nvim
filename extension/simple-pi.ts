@@ -19,7 +19,7 @@ function getSessionName(): string {
   );
 
   if (sessionIdIdx == -1) {
-    throw new Error("(simplepi) Couldn't find session name");
+    throw new Error("(simple-pi) Couldn't find session name");
   }
 
   return process.argv[sessionIdIdx + 1];

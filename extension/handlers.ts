@@ -39,7 +39,7 @@ export const handlers: {
     }
 
     ctx.ui.setEditorText(newText);
-    ctx.ui.notify("simplepi: text pasted");
+    ctx.ui.notify("simple-pi: text pasted");
   },
 
   ping: (pi, ctx, sendEvent, data) => {

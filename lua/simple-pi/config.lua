@@ -19,7 +19,7 @@ function M.setup(opts)
 
 	-- default to nvim surface
 	if M.opts.surface == nil then
-		M.opts.surface = require("simplepi.surfaces.nvim")
+		M.opts.surface = require("simple-pi.surfaces.nvim")
 	end
 
 	if not M.opts.surface.check() then

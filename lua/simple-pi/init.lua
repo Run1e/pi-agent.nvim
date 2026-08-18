@@ -1,11 +1,11 @@
-local config = require("simplepi.config")
-local server = require("simplepi.server")
-local listeners = require("simplepi.listeners")
+local config = require("simple-pi.config")
+local server = require("simple-pi.server")
+local listeners = require("simple-pi.listeners")
 
 local M = {}
 
 function M.make_session_name()
-	return string.format("simplepi-%s-%03d", os.date("%Y-%m-%dT%H-%M-%S"), vim.uv.now() % 1000)
+	return string.format("simple-pi-%s-%03d", os.date("%Y-%m-%dT%H-%M-%S"), vim.uv.now() % 1000)
 end
 
 local function get_socket_dir()
@@ -85,13 +85,13 @@ function M.get_surface(name)
 		name = "nvim"
 	end
 
-	return require("simplepi.surfaces." .. name)
+	return require("simple-pi.surfaces." .. name)
 end
 
 function M.get_extension_path()
 	local current_file = debug.getinfo(1, "S").source:gsub("^@", "")
 	local dir = vim.fn.fnamemodify(current_file, ":p:h:h")
-	return dir .. "/../extension/simplepi.ts"
+	return dir .. "/../extension/simple-pi.ts"
 end
 
 function M.ready()
@@ -100,7 +100,7 @@ end
 
 function M.ready_guard()
 	if not M.ready() then
-		vim.notify("Not connected to Pi, run require('simplepi').start()")
+		vim.notify("Not connected to Pi, run require('simple-pi').start()")
 		return false
 	end
 
