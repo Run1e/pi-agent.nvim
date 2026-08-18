@@ -45,6 +45,25 @@ function M.start()
 end
 
 function M.get_surface(name)
+	local default_surfaces = {
+		nvim = true,
+		tmux = true,
+		herdr = true,
+	}
+
+	if not default_surfaces[name] then
+		vim.notify(
+			string.format(
+				"'%s' is not a valid surface, options are %s. Defaulting to 'nvim'.",
+				name,
+				table.concat(vim.tbl_keys(default_surfaces), ", ")
+			),
+			vim.log.levels.ERROR
+		)
+
+		name = "nvim"
+	end
+
 	return require("simplepi.surfaces." .. name)
 end
 
