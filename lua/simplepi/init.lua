@@ -21,18 +21,15 @@ end
 function M.setup(opts)
 	config.setup(opts)
 
-	M.surfaces = {
-		herdr = require("simplepi.surfaces.herdr"),
-	}
-
 	M.next_id = 1
 	M.session_name = nil
 	M.socket_path = nil
 end
 
 function M.start()
+	-- if already running, just dispatch focus instead
 	if M.ready() then
-		vim.notify("Pi session already running", vim.log.levels.ERROR)
+		M.focus()
 		return
 	end
 
@@ -41,6 +38,14 @@ function M.start()
 	server.start(M.socket_path, M.on_connect, M.on_disconnect, M.on_message)
 
 	config.opts.surface.open(M)
+
+	if config.opts.focus_on_open then
+		config.opts.surface.focus()
+	end
+end
+
+function M.get_surface(name)
+	return require("simplepi.surfaces." .. name)
 end
 
 function M.get_extension_path()
@@ -113,6 +118,14 @@ function M.focus()
 	end
 
 	return config.opts.surface.focus()
+end
+
+function M.close()
+	if not M.ready_guard() then
+		return false
+	end
+
+	return config.opts.surface.close()
 end
 
 function M.paste_line_reference()

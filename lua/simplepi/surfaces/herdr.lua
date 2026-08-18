@@ -1,11 +1,18 @@
 local M = {}
 
+M.default_opts = {}
+
+M.opts = vim.deepcopy(M.default_opts)
+
 M.tab_id = nil
 M.pane_id = nil
 
 -- TODO: double-check all of these failure paths (do we always get json.error with .message?)
 
-function M.new(opts) end
+function M.setup(opts)
+	vim.tbl_deep_extend("force", vim.deepcopy(M.default_opts), opts or {})
+	return M
+end
 
 function M.open(pi)
 	M.tab_id = nil
@@ -15,7 +22,6 @@ function M.open(pi)
 		"herdr",
 		"tab",
 		"create",
-		"--focus",
 		"--cwd",
 		vim.fn.getcwd(),
 	})
@@ -73,6 +79,11 @@ function M.focus()
 		return false
 	end
 
+	return true
+end
+
+-- check if herdr binary exists
+function M.check()
 	return true
 end
 
