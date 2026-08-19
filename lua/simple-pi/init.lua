@@ -4,6 +4,7 @@ local events = require("simple-pi.events")
 
 local M = {}
 
+local setup_completed = false
 local handlers = {}
 local listeners = {}
 local timers = {}
@@ -24,7 +25,7 @@ end
 
 local function clear_correlation(correlation_id)
 	local timer = timers[correlation_id]
-	if timer:is_active() then
+	if timer ~= nil and timer:is_active() then
 		timer:close()
 	end
 
@@ -66,25 +67,37 @@ function M.make_pi_launch_command()
 end
 
 function M.setup(opts)
+	if setup_completed then
+		return
+	end
+
 	config.setup(opts)
 
 	M.next_id = 1
 	M.session_name = nil
 	M.socket_path = nil
 
-	M.listen("pong", events.pong)
+	M.set_handler("testcommand", function(data)
+		vim.notify("in testcommand")
+		vim.notify(vim.inspect(data))
+		return { ret = "value" }
+	end)
 
-	M.listen("success", function(data)
-		local cb = callbacks[data.correlationId]
-		clear_correlation(data.correlationId)
+	M.add_listener("pong", events.pong)
+
+	M.add_listener("success", function(data)
+		local cb = callbacks[data.correlation_id]
+		clear_correlation(data.correlation_id)
 		call_cb(cb)
 	end)
 
-	M.listen("failure", function(data)
-		local cb = callbacks[data.correlationId]
-		clear_correlation(data.correlationId)
+	M.add_listener("failure", function(data)
+		local cb = callbacks[data.correlation_id]
+		clear_correlation(data.correlation_id)
 		call_cb(cb, "failure", data.message)
 	end)
+
+	setup_completed = true
 end
 
 function M.start()
@@ -164,22 +177,28 @@ function M.send(cb, type, name, data)
 
 		timer:start(1000, 0, function()
 			-- if we're running we timed out
+
+			-- close the timer
 			timer:close()
-			timers[correlation_id] = nil
+
+			-- other cleanup
+			clear_correlation(correlation_id)
+
+			-- call callback
 			call_cb(cb, "timeout", "command '" .. name .. "' timed out")
 		end)
 	end
 
 	-- would've loved a uuid for the id but eh this is fine?
-	server.send({ correlationId = M.next_id, type = type, name = name, data = data })
+	server.send({ correlation_id = M.next_id, type = type, name = name, data = data })
 	M.next_id = M.next_id + 1
 end
 
-function M.handle(command_name, func)
+function M.set_handler(command_name, func)
 	handlers[command_name] = func
 end
 
-function M.listen(event_name, func)
+function M.add_listener(event_name, func)
 	listeners[event_name] = listeners[event_name] or {}
 	table.insert(listeners[event_name], func)
 end
@@ -187,11 +206,19 @@ end
 function M.on_message(msg)
 	if msg.type == "command" then
 		local handler = handlers[msg.name]
+
 		if handler then
-			if handler(msg.data) then
-				M.send("event", "success", { correlationId = msg.correlationId })
+			local ok, value = pcall(handler, msg.data)
+			if ok then
+				M.send(nil, "event", "success", {
+					correlation_id = msg.correlation_id,
+					value = value,
+				})
 			else
-				M.send("event", "failure", { correlationId = msg.correlationId })
+				M.send(nil, "event", "failure", {
+					correlation_id = msg.correlation_id,
+					message = tostring(value),
+				})
 			end
 		end
 	elseif msg.type == "event" then
@@ -218,7 +245,7 @@ function M.ping()
 end
 
 function M.add_text(text)
-	M.send("command", "addText", { text = text })
+	M.send("command", "append_text", { text = text })
 end
 
 function get_buf_name(buf)
@@ -261,10 +288,10 @@ function M.paste_line_reference(cb)
 	local buf_name = get_buf_name(buf)
 
 	if buf_name == nil then
-		return call_cb("error", "Buffer is unnamed")
+		return call_cb(cb, "error", "Buffer is unnamed")
 	end
 
-	M.send(cb, "command", "addText", { text = buf_name .. ":" .. line[1] })
+	M.send(cb, "command", "append_text", { text = buf_name .. ":" .. line[1] })
 end
 
 function M.paste_range_reference(cb, opts)
@@ -298,7 +325,15 @@ function M.paste_range_reference(cb, opts)
 	local start_line = start_mark[1]
 	local end_line = end_mark[1]
 
-	M.send(cb, "command", "addText", { text = buf_name .. ":" .. start_line .. "-" .. end_line })
+	M.send(cb, "command", "append_text", { text = buf_name .. ":" .. start_line .. "-" .. end_line })
+end
+
+function M.test(cb)
+	if not M.ready_guard(cb) then
+		return
+	end
+
+	M.send(cb, "command", "test", {})
 end
 
 return M

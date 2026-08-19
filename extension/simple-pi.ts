@@ -6,7 +6,7 @@ import type {
 import { Dispatcher } from "./dispatcher.ts";
 
 import { createConnection, Socket } from "net";
-import { handleAddText, handlePing } from "./commands.ts";
+import { handleAppendText, handlePing, handleTest } from "./commands.ts";
 import { findSocket } from "./utils.ts";
 
 let client: Socket | null = null;
@@ -30,15 +30,15 @@ function getContext(): ExtensionContext {
 
 function createClient() {
   client = createConnection({ path: findSocket() }, () =>
-    getContext().ui.notify("Connected to Neovim! :D"),
+    getContext().ui.notify("[simple-pi] Connected to Neovim :D"),
   );
 
   client.on("end", () => {
-    getContext().ui.notify("Lost connection to Neovim! D:", "error");
+    getContext().ui.notify("[simple-pi] Lost connection to Neovim D:", "error");
   });
 
   client.on("error", (err) => {
-    getContext().ui.notify(err.message, "error");
+    getContext().ui.notify("[simple-pi] " + err.message, "error");
     getClient().destroy();
   });
 
@@ -85,8 +85,9 @@ export default function (pi: ExtensionAPI) {
       dispatcher = new Dispatcher(pi, ctx, sendData);
 
       // register command handlers
-      dispatcher.setHandler("addText", handleAddText);
+      dispatcher.setHandler("append_text", handleAppendText);
       dispatcher.setHandler("ping", handlePing);
+      dispatcher.setHandler("test", handleTest);
     }
   });
 
