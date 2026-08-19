@@ -10,7 +10,7 @@ M.pane_id = nil
 -- TODO: double-check all of these failure paths (do we always get json.error with .message?)
 
 function M.setup(opts)
-	vim.tbl_deep_extend("force", vim.deepcopy(M.default_opts), opts or {})
+	M.opts = vim.tbl_deep_extend("force", vim.deepcopy(M.default_opts), opts or {})
 	return M
 end
 
@@ -53,7 +53,8 @@ end
 function M.close()
 	-- TODO: should we check if pi is even still running in the tab before we close it?
 	vim.schedule(function()
-		result = vim.fn.system({ "herdr", "tab", "close", M.tab_id })
+		local result = vim.fn.system({ "herdr", "tab", "close", M.tab_id })
+		-- TODO: check result
 		M.tab_id = nil
 		M.pane_id = nil
 	end)
