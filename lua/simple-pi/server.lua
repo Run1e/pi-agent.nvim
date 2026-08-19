@@ -83,7 +83,9 @@ function promote_client(client)
 				local ok, msg = pcall(vim.json.decode, line)
 				-- TODO: probably want to properly abandon if !ok
 				if ok and M.on_message then
-					M.on_message(msg)
+					vim.schedule(function()
+						M.on_message(msg)
+					end)
 				end
 			end
 		end
@@ -127,6 +129,7 @@ function M.send(data)
 end
 
 function M.stop()
+	-- TODO: actually close server?
 	if M.path then
 		os.remove(M.path)
 	end

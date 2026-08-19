@@ -3,51 +3,14 @@ import type {
   ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
 
-import type { Protocol, Command } from "./handlers.ts";
-import { handlers } from "./handlers.ts";
+import { Dispatcher } from "./dispatcher.ts";
 
-import { accessSync, constants } from "fs";
 import { createConnection, Socket } from "net";
+import { handleAddText, handlePing } from "./commands.ts";
+import { findSocket } from "./utils.ts";
 
 let client: Socket | null = null;
-let _pi: ExtensionAPI | null = null;
-let _ctx: ExtensionContext | null = null;
-
-function getSessionName(): string {
-  const sessionIdIdx = process.argv.findIndex(
-    (value) => value === "--session-id",
-  );
-
-  if (sessionIdIdx == -1) {
-    throw new Error("(simple-pi) Couldn't find session name");
-  }
-
-  return process.argv[sessionIdIdx + 1];
-}
-
-function getSocketDir(): string {
-  // use /tmp if runtime dir doesn't pan out
-  let tmpDir = "/tmp";
-
-  let idealDir = process.env.XDG_RUNTIME_DIR;
-  if (!idealDir || !idealDir.length) {
-    return tmpDir;
-  }
-
-  try {
-    accessSync(idealDir, constants.W_OK);
-  } catch {
-    return tmpDir;
-  }
-
-  idealDir += "/simple-pi";
-  try {
-    accessSync(idealDir, constants.W_OK);
-    return idealDir;
-  } catch {
-    return tmpDir;
-  }
-}
+let dispatcher: Dispatcher | null = null;
 
 function getClient(): Socket {
   if (!client || client.destroyed) {
@@ -58,25 +21,16 @@ function getClient(): Socket {
 }
 
 function getContext(): ExtensionContext {
-  if (!_ctx) {
+  if (!dispatcher) {
     throw new Error();
   }
 
-  return _ctx;
-}
-
-function getPi(): ExtensionAPI {
-  if (!_pi) {
-    throw new Error();
-  }
-
-  return _pi;
+  return dispatcher.getContext();
 }
 
 function createClient() {
-  client = createConnection(
-    { path: getSocketDir() + "/" + getSessionName() + ".sock" },
-    () => getContext().ui.notify("Connected to Neovim! :D"),
+  client = createConnection({ path: findSocket() }, () =>
+    getContext().ui.notify("Connected to Neovim! :D"),
   );
 
   client.on("end", () => {
@@ -105,56 +59,34 @@ function createClient() {
           continue;
         }
 
-        handleMessage(msg);
+        if (dispatcher) {
+          dispatcher.dispatch(msg);
+        }
       }
     }
   });
 }
 
-function dispatch<K extends keyof Protocol>(command: Command<K>) {
-  const handler = handlers[command.command];
-  if (handler == undefined) {
-    return;
-  }
-
-  handler(getPi(), getContext(), buildReplier(command.id), command.data);
-}
-
-function buildReplier(id: number) {
-  return (eventName: string, data: object) => {
-    getClient().write(
-      JSON.stringify({ id: id, event: eventName, data: data }) + "\n",
-    );
-  };
-}
-
-function isCommand(msg: unknown): msg is Command {
-  return (
-    msg != null &&
-    typeof msg == "object" &&
-    "command" in msg &&
-    typeof msg.command == "string" &&
-    msg.command in handlers &&
-    "data" in msg &&
-    typeof msg.data == "object"
-  );
-}
-
-function handleMessage(msg: unknown) {
-  if (!isCommand(msg) || !_pi || !_ctx) {
-    return;
-  }
-
-  dispatch(msg);
-}
-
 export default function (pi: ExtensionAPI) {
   pi.on("session_start", async (event, ctx) => {
-    _pi = pi;
-    _ctx = ctx;
-
     if (!client || client.destroyed || client.closed) {
       createClient();
+    }
+
+    if (!dispatcher) {
+      const sendData = (data: object) => {
+        if (!client) {
+          return;
+        }
+
+        client.write(JSON.stringify(data) + "\n");
+      };
+
+      dispatcher = new Dispatcher(pi, ctx, sendData);
+
+      // register command handlers
+      dispatcher.setHandler("addText", handleAddText);
+      dispatcher.setHandler("ping", handlePing);
     }
   });
 
@@ -165,7 +97,8 @@ export default function (pi: ExtensionAPI) {
       client.destroy();
     }
 
-    _pi = null;
-    _ctx = null;
+    if (dispatcher) {
+      dispatcher = null;
+    }
   });
 }

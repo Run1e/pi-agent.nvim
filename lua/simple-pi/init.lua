@@ -1,8 +1,36 @@
 local config = require("simple-pi.config")
 local server = require("simple-pi.server")
-local listeners = require("simple-pi.listeners")
+local events = require("simple-pi.events")
 
 local M = {}
+
+local handlers = {}
+local listeners = {}
+local timers = {}
+local callbacks = {}
+
+local function call_cb(cb, reason, message)
+	if reason ~= nil then
+		vim.notify("simple-pi " .. reason .. ": " .. message, vim.log.levels.ERROR)
+		if cb ~= nil then
+			cb({ ok = false, reason = reason, message = message })
+		end
+	else
+		if cb ~= nil then
+			cb({ ok = true, reason = nil, message = nil })
+		end
+	end
+end
+
+local function clear_correlation(correlation_id)
+	local timer = timers[correlation_id]
+	if timer:is_active() then
+		timer:close()
+	end
+
+	timers[correlation_id] = nil
+	callbacks[correlation_id] = nil
+end
 
 function M.make_session_name()
 	return string.format("simple-pi-%s-%03d", os.date("%Y-%m-%dT%H-%M-%S"), vim.uv.now() % 1000)
@@ -13,16 +41,14 @@ local function get_socket_dir()
 	local ideal_dir = os.getenv("XDG_RUNTIME_DIR")
 
 	if ideal_dir == nil or #ideal_dir == 0 or vim.uv.fs_access(ideal_dir, "w") ~= true then
-		vim.notify("... what?")
 		return tmp_dir
 	end
 
-	local ideal_dir = ideal_dir .. "/simple-pi"
+	ideal_dir = ideal_dir .. "/simple-pi"
 	vim.uv.fs_mkdir(ideal_dir, tonumber("700", 8))
 
 	-- fall back to base if we couldn't make it usable
 	if vim.uv.fs_access(ideal_dir, "w") ~= true then
-		vim.notify("failed fs_access")
 		return tmp_dir
 	end
 
@@ -45,6 +71,20 @@ function M.setup(opts)
 	M.next_id = 1
 	M.session_name = nil
 	M.socket_path = nil
+
+	M.listen("pong", events.pong)
+
+	M.listen("success", function(data)
+		local cb = callbacks[data.correlationId]
+		clear_correlation(data.correlationId)
+		call_cb(cb)
+	end)
+
+	M.listen("failure", function(data)
+		local cb = callbacks[data.correlationId]
+		clear_correlation(data.correlationId)
+		call_cb(cb, "failure", data.message)
+	end)
 end
 
 function M.start()
@@ -98,29 +138,66 @@ function M.ready()
 	return server.is_active()
 end
 
-function M.ready_guard()
+function M.ready_guard(cb)
 	if not M.ready() then
-		vim.notify("Not connected to Pi, run require('simple-pi').start()")
+		call_cb(cb, "error", "Not connected to Pi, run require('simple-pi').start()")
 		return false
 	end
 
 	return true
 end
 
-function M.send_command(command, data)
-	if not M.ready_guard() then
+function M.send(cb, type, name, data)
+	if not M.ready_guard(cb) then
 		return
 	end
 
+	local timer
+	local correlation_id = M.next_id
+
+	callbacks[M.next_id] = cb
+
+	-- for commands we want to check for acks/nacks returning
+	if type == "command" then
+		timer = vim.uv.new_timer()
+		timers[correlation_id] = timer
+
+		timer:start(1000, 0, function()
+			-- if we're running we timed out
+			timer:close()
+			timers[correlation_id] = nil
+			call_cb(cb, "timeout", "command '" .. name .. "' timed out")
+		end)
+	end
+
 	-- would've loved a uuid for the id but eh this is fine?
-	server.send({ id = M.next_id, command = command, data = data })
+	server.send({ correlationId = M.next_id, type = type, name = name, data = data })
 	M.next_id = M.next_id + 1
 end
 
+function M.handle(command_name, func)
+	handlers[command_name] = func
+end
+
+function M.listen(event_name, func)
+	listeners[event_name] = listeners[event_name] or {}
+	table.insert(listeners[event_name], func)
+end
+
 function M.on_message(msg)
-	local listener = listeners[msg.event]
-	if listener then
-		listener(msg.data)
+	if msg.type == "command" then
+		local handler = handlers[msg.name]
+		if handler then
+			if handler(msg.data) then
+				M.send("event", "success", { correlationId = msg.correlationId })
+			else
+				M.send("event", "failure", { correlationId = msg.correlationId })
+			end
+		end
+	elseif msg.type == "event" then
+		for _, listener in ipairs(listeners[msg.name] or {}) do
+			pcall(listener, msg.data)
+		end
 	end
 end
 
@@ -137,11 +214,11 @@ function M.on_disconnect()
 end
 
 function M.ping()
-	M.send_command("ping", {})
+	M.send("command", "ping", {})
 end
 
 function M.add_text(text)
-	M.send_command("addText", { text = text })
+	M.send("command", "addText", { text = text })
 end
 
 function get_buf_name(buf)
@@ -155,12 +232,13 @@ function get_buf_name(buf)
 	return vim.fn.fnamemodify(buf_name, ":.")
 end
 
-function M.focus()
-	if not M.ready_guard() then
-		return false
+function M.focus(cb)
+	if not M.ready_guard(cb) then
+		return
 	end
 
-	return config.opts.surface.focus()
+	config.opts.surface.focus()
+	call_cb(cb)
 end
 
 function M.close()
@@ -171,9 +249,9 @@ function M.close()
 	return config.opts.surface.close()
 end
 
-function M.paste_line_reference()
-	if not M.ready_guard() then
-		return false
+function M.paste_line_reference(cb)
+	if not M.ready_guard(cb) then
+		return
 	end
 
 	local win = vim.api.nvim_get_current_win()
@@ -183,24 +261,20 @@ function M.paste_line_reference()
 	local buf_name = get_buf_name(buf)
 
 	if buf_name == nil then
-		-- TODO: add notify error
-		return false
+		return call_cb("error", "Buffer is unnamed")
 	end
 
-	M.add_text(buf_name .. ":" .. line[1])
-
-	return true
+	M.send(cb, "command", "addText", { text = buf_name .. ":" .. line[1] })
 end
 
-function M.paste_range_reference(opts)
-	if not M.ready_guard() then
-		return false
+function M.paste_range_reference(cb, opts)
+	if not M.ready_guard(cb) then
+		return
 	end
 
 	local mode = vim.fn.mode()
 	if (mode ~= "v") and (mode ~= "V") and (mode ~= "\22") then
-		vim.notify("Not in visual mode", vim.log.levels.WARN)
-		return false
+		return call_cb(cb, "error", "Not in visual mode")
 	end
 
 	-- unfortunately you need to exit visual mode for the < and > marks to update properly
@@ -218,15 +292,13 @@ function M.paste_range_reference(opts)
 
 	if buf_name == nil then
 		-- TODO: add notify error
-		return false
+		return call_cb(cb, "error", "Buffer is unnamed")
 	end
 
 	local start_line = start_mark[1]
 	local end_line = end_mark[1]
 
-	M.add_text(buf_name .. ":" .. start_line .. "-" .. end_line)
-
-	return true
+	M.send(cb, "command", "addText", { text = buf_name .. ":" .. start_line .. "-" .. end_line })
 end
 
 return M

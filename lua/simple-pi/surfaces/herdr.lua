@@ -51,6 +51,7 @@ function M.open(pi)
 end
 
 function M.close()
+	-- TODO: should we check if pi is even still running in the tab before we close it?
 	vim.schedule(function()
 		result = vim.fn.system({ "herdr", "tab", "close", M.tab_id })
 		M.tab_id = nil
