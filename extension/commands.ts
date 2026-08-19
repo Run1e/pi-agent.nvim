@@ -45,5 +45,6 @@ export const handleTest: CommandHandler<"test"> = async (meta, data) => {
   const result = await meta.invokeCommand("testcommand", {
     hello: "there",
   });
-  meta.ctx.ui.notify(result);
+
+  meta.ctx.ui.notify(result.ret);
 };

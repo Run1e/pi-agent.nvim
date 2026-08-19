@@ -1,6 +1,8 @@
 local config = require("simple-pi.config")
 local server = require("simple-pi.server")
+local commands = require("simple-pi.commands")
 local events = require("simple-pi.events")
+local utils = require("simple-pi.utils")
 
 local M = {}
 
@@ -33,39 +35,6 @@ local function clear_correlation(correlation_id)
 	callbacks[correlation_id] = nil
 end
 
-function M.make_session_name()
-	return string.format("simple-pi-%s-%03d", os.date("%Y-%m-%dT%H-%M-%S"), vim.uv.now() % 1000)
-end
-
-local function get_socket_dir()
-	local tmp_dir = "/tmp"
-	local ideal_dir = os.getenv("XDG_RUNTIME_DIR")
-
-	if ideal_dir == nil or #ideal_dir == 0 or vim.uv.fs_access(ideal_dir, "w") ~= true then
-		return tmp_dir
-	end
-
-	ideal_dir = ideal_dir .. "/simple-pi"
-	vim.uv.fs_mkdir(ideal_dir, tonumber("700", 8))
-
-	-- fall back to base if we couldn't make it usable
-	if vim.uv.fs_access(ideal_dir, "w") ~= true then
-		return tmp_dir
-	end
-
-	return ideal_dir
-end
-
-function M.make_pi_launch_command()
-	return {
-		"pi",
-		"-e",
-		M.get_extension_path(),
-		"--session-id",
-		M.session_name,
-	}
-end
-
 function M.setup(opts)
 	if setup_completed then
 		return
@@ -82,6 +51,9 @@ function M.setup(opts)
 		vim.notify(vim.inspect(data))
 		return { ret = "value" }
 	end)
+
+	M.set_handler("nvim_get_qflist", commands.nvim_get_qflist)
+	M.set_handler("nvim_set_qflist", commands.nvim_set_qflist)
 
 	M.add_listener("pong", events.pong)
 
@@ -107,8 +79,8 @@ function M.start()
 		return
 	end
 
-	M.session_name = M.make_session_name()
-	M.socket_path = get_socket_dir() .. "/" .. M.session_name .. ".sock"
+	M.session_name = utils.make_session_name()
+	M.socket_path = utils.get_socket_dir() .. "/" .. M.session_name .. ".sock"
 	server.start(M.socket_path, M.on_connect, M.on_disconnect, M.on_message)
 
 	config.opts.surface.open(M)
@@ -141,17 +113,11 @@ function M.get_surface(name)
 	return require("simple-pi.surfaces." .. name)
 end
 
-function M.get_extension_path()
-	local current_file = debug.getinfo(1, "S").source:gsub("^@", "")
-	local dir = vim.fn.fnamemodify(current_file, ":p:h:h")
-	return dir .. "/../extension/simple-pi.ts"
-end
-
 function M.ready()
 	return server.is_active()
 end
 
-function M.ready_guard(cb)
+local function ready_guard(cb)
 	if not M.ready() then
 		call_cb(cb, "error", "Not connected to Pi, run require('simple-pi').start()")
 		return false
@@ -161,7 +127,7 @@ function M.ready_guard(cb)
 end
 
 function M.send(cb, type, name, data)
-	if not M.ready_guard(cb) then
+	if not ready_guard(cb) then
 		return
 	end
 
@@ -244,19 +210,8 @@ function M.ping()
 	M.send(nil, "command", "ping", {})
 end
 
-local function get_buf_name(buf)
-	local buf_name = vim.api.nvim_buf_get_name(buf)
-
-	-- ignore unsaved/scratch buffers
-	if buf_name == "" then
-		return nil
-	end
-
-	return vim.fn.fnamemodify(buf_name, ":.")
-end
-
 function M.focus(cb)
-	if not M.ready_guard(cb) then
+	if not ready_guard(cb) then
 		return
 	end
 
@@ -265,7 +220,7 @@ function M.focus(cb)
 end
 
 function M.close()
-	if not M.ready_guard() then
+	if not ready_guard() then
 		return false
 	end
 
@@ -273,7 +228,7 @@ function M.close()
 end
 
 function M.paste_line_reference(cb)
-	if not M.ready_guard(cb) then
+	if not ready_guard(cb) then
 		return
 	end
 
@@ -281,7 +236,7 @@ function M.paste_line_reference(cb)
 	local buf = vim.api.nvim_get_current_buf()
 	local line = vim.api.nvim_win_get_cursor(win)
 
-	local buf_name = get_buf_name(buf)
+	local buf_name = utils.get_buf_name(buf)
 
 	if buf_name == nil then
 		return call_cb(cb, "error", "Buffer is unnamed")
@@ -291,7 +246,7 @@ function M.paste_line_reference(cb)
 end
 
 function M.paste_range_reference(cb, opts)
-	if not M.ready_guard(cb) then
+	if not ready_guard(cb) then
 		return
 	end
 
@@ -311,10 +266,9 @@ function M.paste_range_reference(cb, opts)
 		vim.cmd("normal! gv")
 	end
 
-	local buf_name = get_buf_name(buf)
+	local buf_name = utils.get_buf_name(buf)
 
 	if buf_name == nil then
-		-- TODO: add notify error
 		return call_cb(cb, "error", "Buffer is unnamed")
 	end
 
@@ -325,7 +279,7 @@ function M.paste_range_reference(cb, opts)
 end
 
 function M.test(cb)
-	if not M.ready_guard(cb) then
+	if not ready_guard(cb) then
 		return
 	end
 

@@ -1,3 +1,5 @@
+local utils = require("simple-pi.utils")
+
 local M = {}
 
 M.default_opts = {
@@ -62,7 +64,7 @@ function start_term()
 		term = true,
 	}
 
-	M.chan_id = vim.fn.jobstart(require("simple-pi").make_pi_launch_command(), jobstart_opts)
+	M.chan_id = vim.fn.jobstart(utils.make_pi_launch_command(require("simple-pi")), jobstart_opts)
 	-- TODO: return of < 1 means error, log it
 
 	vim.bo[M.buf_id].bufhidden = "hide"

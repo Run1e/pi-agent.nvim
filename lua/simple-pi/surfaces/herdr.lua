@@ -1,3 +1,5 @@
+local utils = require("simple-pi.utils")
+
 local M = {}
 
 M.default_opts = {}
@@ -42,7 +44,7 @@ function M.open(pi)
 		M.pane_id,
 	}
 
-	vim.list_extend(cmd, pi.make_pi_launch_command())
+	vim.list_extend(cmd, utils.make_pi_launch_command(pi.session_name))
 
 	result = vim.fn.system(cmd)
 	-- TODO: check here also

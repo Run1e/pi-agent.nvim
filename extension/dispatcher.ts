@@ -77,64 +77,64 @@ export class Dispatcher {
     return nextId;
   }
 
+  invokeCommand(name: string, data: any) {
+    const newCorrelationId = this.newCorrelationId();
+
+    this.sendData({
+      type: "command",
+      name: name,
+      correlation_id: newCorrelationId,
+      data: data,
+    });
+
+    let successUnsubscribe: () => void;
+    let failureUnsubscribe: () => void;
+    let timeoutId: NodeJS.Timeout;
+
+    return new Promise((resolve, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new Error(`command '${name}' timed out`));
+      }, 1000);
+
+      successUnsubscribe = this.addListener("command_success", (data) => {
+        if (data.correlation_id !== newCorrelationId) return;
+        resolve(data.value);
+      });
+
+      failureUnsubscribe = this.addListener("command_failure", (data) => {
+        if (data.correlation_id !== newCorrelationId) return;
+        reject(new Error(data.message));
+      });
+    }).finally(() => {
+      try {
+        successUnsubscribe();
+      } catch (e) {}
+      try {
+        failureUnsubscribe();
+      } catch (e) {}
+
+      if (timeoutId != null) {
+        clearTimeout(timeoutId);
+      }
+    });
+  }
+
+  sendEvent(name: string, data: any) {
+    // events are fire-and-forget
+    this.sendData({
+      type: "event",
+      name: name,
+      correlation_id: this.newCorrelationId(),
+      data: data,
+    });
+  }
+
   buildMeta(): Meta {
-    const invokeCommand = (name: string, data: any) => {
-      const newCorrelationId = this.newCorrelationId();
-
-      this.sendData({
-        type: "command",
-        name: name,
-        correlation_id: newCorrelationId,
-        data: data,
-      });
-
-      let successUnsubscribe: () => void;
-      let failureUnsubscribe: () => void;
-      let timeoutId: NodeJS.Timeout;
-
-      return new Promise((resolve, reject) => {
-        timeoutId = setTimeout(() => {
-          reject(new Error(`command '${name}' timed out`));
-        }, 1000);
-
-        successUnsubscribe = this.addListener("command_success", (data) => {
-          if (data.correlation_id !== newCorrelationId) return;
-          resolve(data.value);
-        });
-
-        failureUnsubscribe = this.addListener("command_failure", (data) => {
-          if (data.correlation_id !== newCorrelationId) return;
-          reject(new Error(data.message));
-        });
-      }).finally(() => {
-        try {
-          successUnsubscribe();
-        } catch (e) {}
-        try {
-          failureUnsubscribe();
-        } catch (e) {}
-
-        if (timeoutId != null) {
-          clearTimeout(timeoutId);
-        }
-      });
-    };
-
-    const sendEvent = (name: string, data: any) => {
-      // events are fire-and-forget
-      this.sendData({
-        type: "event",
-        name: name,
-        correlation_id: this.newCorrelationId(),
-        data: data,
-      });
-    };
-
     return {
       pi: this.pi,
       ctx: this.ctx,
-      invokeCommand: invokeCommand,
-      sendEvent: sendEvent,
+      invokeCommand: this.invokeCommand,
+      sendEvent: this.sendEvent,
     };
   }
 

@@ -8,6 +8,7 @@ import { Dispatcher } from "./dispatcher.ts";
 import { createConnection, Socket } from "net";
 import { handleAppendText, handlePing, handleTest } from "./commands.ts";
 import { findSocket } from "./utils.ts";
+import { registerTools } from "./tools.ts";
 
 let client: Socket | null = null;
 let dispatcher: Dispatcher | null = null;
@@ -26,6 +27,14 @@ function getContext(): ExtensionContext {
   }
 
   return dispatcher.getContext();
+}
+
+function getDispatcher(): Dispatcher {
+  if (!dispatcher) {
+    throw new Error("Not connected to Neovim");
+  }
+
+  return dispatcher;
 }
 
 function createClient() {
@@ -67,6 +76,14 @@ function createClient() {
   });
 }
 
+function isConnected(): boolean {
+  if (!client || client.closed || client.destroyed || client.errored) {
+    return false;
+  }
+
+  return true;
+}
+
 export default function (pi: ExtensionAPI) {
   pi.on("session_start", async (event, ctx) => {
     if (!client || client.destroyed || client.closed) {
@@ -89,6 +106,8 @@ export default function (pi: ExtensionAPI) {
       dispatcher.setHandler("ping", handlePing);
       dispatcher.setHandler("test", handleTest);
     }
+
+    registerTools(pi, getDispatcher);
   });
 
   pi.on("session_shutdown", async (event, ctx) => {
