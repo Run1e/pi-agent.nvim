@@ -77,9 +77,9 @@ export class Dispatcher {
     return nextId;
   }
 
-  buildMeta(correlationId: number): Meta {
+  buildMeta(): Meta {
     const invokeCommand = (name: string, data: any) => {
-      const newCorrelationId = correlationId;
+      const newCorrelationId = this.newCorrelationId();
 
       this.sendData({
         type: "command",
@@ -94,7 +94,7 @@ export class Dispatcher {
 
       return new Promise((resolve, reject) => {
         timeoutId = setTimeout(() => {
-          reject("Timed out waiting for command");
+          reject(new Error(`command '${name}' timed out`));
         }, 1000);
 
         successUnsubscribe = this.addListener("command_success", (data) => {
@@ -104,7 +104,7 @@ export class Dispatcher {
 
         failureUnsubscribe = this.addListener("command_failure", (data) => {
           if (data.correlation_id !== newCorrelationId) return;
-          reject("failure");
+          reject(new Error(data.message));
         });
       }).finally(() => {
         try {
@@ -147,10 +147,7 @@ export class Dispatcher {
     let value;
 
     try {
-      value = await handler(
-        this.buildMeta(command.correlation_id),
-        command.data,
-      );
+      value = await handler(this.buildMeta(), command.data);
     } catch (e: any) {
       this.sendData({
         type: "event",
