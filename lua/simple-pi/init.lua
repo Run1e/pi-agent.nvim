@@ -54,6 +54,7 @@ function M.setup(opts)
 
 	M.set_handler("nvim_get_qflist", commands.nvim_get_qflist)
 	M.set_handler("nvim_set_qflist", commands.nvim_set_qflist)
+	M.set_handler("nvim_get_register", commands.nvim_get_register)
 
 	M.add_listener("pong", events.pong)
 

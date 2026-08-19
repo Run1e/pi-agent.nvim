@@ -104,4 +104,42 @@ export function registerTools(
       }
     },
   });
+
+  pi.registerTool({
+    name: "nvim_get_register",
+    label: "Neovim get register",
+    description: "Get a Neovim register",
+    promptGuidelines: [
+      "Use nvim_get_register when you need to get the value of a Neovim register",
+      "% = current buffer, # = alternate buffer, : = previous command",
+    ],
+    parameters: Type.Object({
+      register: Type.String({ description: "Register name" }),
+    }),
+
+    async execute(toolCallId, params, signal, onUpdate, ctx) {
+      const dispatcher = getDispatcher();
+      if (!dispatcher) {
+        return {
+          content: [{ type: "text", text: "Not connected to Neovim" }],
+          details: {},
+          isError: true,
+        };
+      }
+      const data: any = (await dispatcher.invokeCommand(
+        "nvim_get_register",
+        params,
+      )) as any;
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `register: ${data.register}\ntype: ${data.type}\ntext: ${data.text}`,
+          },
+        ],
+        details: {},
+      };
+    },
+  });
 }

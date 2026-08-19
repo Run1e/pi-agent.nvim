@@ -76,14 +76,6 @@ function createClient() {
   });
 }
 
-function isConnected(): boolean {
-  if (!client || client.closed || client.destroyed || client.errored) {
-    return false;
-  }
-
-  return true;
-}
-
 export default function (pi: ExtensionAPI) {
   pi.on("session_start", async (event, ctx) => {
     if (!client || client.destroyed || client.closed) {

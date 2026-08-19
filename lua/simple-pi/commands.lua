@@ -23,10 +23,6 @@ local M = {}
 --         custom data associated with the item, can be
 --         any type.
 
-function format_qflist_errors(error)
-	return string.format()
-end
-
 function M.nvim_get_qflist(data)
 	local out = {}
 	local list = vim.fn.getqflist()
@@ -58,10 +54,12 @@ function M.nvim_set_qflist(data)
 	local result = vim.fn.setqflist(items, action_map[data.action])
 	vim.notify(vim.inspect(result))
 
-	if result == 0 then
-		return true
-	end
-	return false
+	return result == 0
+end
+
+function M.nvim_get_register(data)
+	local r = data.register or '"'
+	return { register = r, text = vim.fn.getreg(r), type = vim.fn.getregtype(r) }
 end
 
 return M
