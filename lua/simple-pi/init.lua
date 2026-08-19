@@ -10,15 +10,15 @@ local listeners = {}
 local timers = {}
 local callbacks = {}
 
-local function call_cb(cb, reason, message)
+local function call_cb(cb, reason, message, value)
 	if reason ~= nil then
 		vim.notify("simple-pi " .. reason .. ": " .. message, vim.log.levels.ERROR)
 		if cb ~= nil then
-			cb({ ok = false, reason = reason, message = message })
+			cb({ ok = false, reason = reason, message = message, value = nil })
 		end
 	else
 		if cb ~= nil then
-			cb({ ok = true, reason = nil, message = nil })
+			cb({ ok = true, reason = nil, message = nil, value = value })
 		end
 	end
 end
@@ -85,13 +85,13 @@ function M.setup(opts)
 
 	M.add_listener("pong", events.pong)
 
-	M.add_listener("success", function(data)
+	M.add_listener("command_success", function(data)
 		local cb = callbacks[data.correlation_id]
 		clear_correlation(data.correlation_id)
-		call_cb(cb)
+		call_cb(cb, nil, nil, data.value)
 	end)
 
-	M.add_listener("failure", function(data)
+	M.add_listener("command_failure", function(data)
 		local cb = callbacks[data.correlation_id]
 		clear_correlation(data.correlation_id)
 		call_cb(cb, "failure", data.message)
@@ -210,12 +210,12 @@ function M.on_message(msg)
 		if handler then
 			local ok, value = pcall(handler, msg.data)
 			if ok then
-				M.send(nil, "event", "success", {
+				M.send(nil, "event", "command_success", {
 					correlation_id = msg.correlation_id,
 					value = value,
 				})
 			else
-				M.send(nil, "event", "failure", {
+				M.send(nil, "event", "command_failure", {
 					correlation_id = msg.correlation_id,
 					message = tostring(value),
 				})
@@ -241,14 +241,10 @@ function M.on_disconnect()
 end
 
 function M.ping()
-	M.send("command", "ping", {})
+	M.send(nil, "command", "ping", {})
 end
 
-function M.add_text(text)
-	M.send("command", "append_text", { text = text })
-end
-
-function get_buf_name(buf)
+local function get_buf_name(buf)
 	local buf_name = vim.api.nvim_buf_get_name(buf)
 
 	-- ignore unsaved/scratch buffers

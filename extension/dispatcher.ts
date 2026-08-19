@@ -97,12 +97,12 @@ export class Dispatcher {
           reject("Timed out waiting for command");
         }, 1000);
 
-        successUnsubscribe = this.addListener("success", (data) => {
+        successUnsubscribe = this.addListener("command_success", (data) => {
           if (data.correlation_id !== newCorrelationId) return;
           resolve(data.value);
         });
 
-        failureUnsubscribe = this.addListener("failure", (data) => {
+        failureUnsubscribe = this.addListener("command_failure", (data) => {
           if (data.correlation_id !== newCorrelationId) return;
           reject("failure");
         });
@@ -154,7 +154,7 @@ export class Dispatcher {
     } catch (e: any) {
       this.sendData({
         type: "event",
-        name: "failure",
+        name: "command_failure",
         correlation_id: command.correlation_id,
         data: { correlation_id: command.correlation_id, message: e.message },
       });
@@ -163,7 +163,7 @@ export class Dispatcher {
 
     this.sendData({
       type: "event",
-      name: "success",
+      name: "command_success",
       correlation_id: command.correlation_id,
       data: { correlation_id: command.correlation_id, value: value },
     });

@@ -1,6 +1,6 @@
 export type PiEvents = {
-  success: { correlation_id: number; value: any };
-  failure: { correlation_id: number; message: string };
+  command_success: { correlation_id: number; value: any };
+  command_failure: { correlation_id: number; message: string };
 };
 
 export type PiEvent<K extends keyof PiEvents = keyof PiEvents> = {
