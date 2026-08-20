@@ -68,7 +68,7 @@ function M.close(inhibit_promote)
 	end
 
 	M.client:close(function()
-		pcall(M.on_disconnect)
+		vim.schedule(M.on_disconnect)
 		if inhibit_promote ~= true then
 			M.maybe_promote_pending()
 		end
@@ -100,16 +100,15 @@ function M.promote_client(client)
 				if line ~= "" then
 					local ok, msg = pcall(vim.json.decode, line)
 
-					if not ok then
-						vim.schedule(function()
+					-- schedule out from the read hot loop
+					vim.schedule(function()
+						if not ok then
 							utils.error("Bad JSON from client, closing")
 							M.close()
-						end)
-					elseif M.on_message then
-						vim.schedule(function()
+						elseif M.on_message then
 							M.on_message(msg)
-						end)
-					end
+						end
+					end)
 				end
 			end
 		else
@@ -118,9 +117,7 @@ function M.promote_client(client)
 		end
 	end)
 
-	vim.schedule(function()
-		M.on_connect()
-	end)
+	vim.schedule(M.on_connect)
 end
 
 function M.maybe_promote_pending()

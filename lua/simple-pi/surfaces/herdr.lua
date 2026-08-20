@@ -91,17 +91,17 @@ end
 function M.close()
 	-- this will kill the pi instance if it's still running there? do we even want that?
 	-- I mean it's kind of semantically what close would mean in this situation
-	vim.schedule(function()
-		local data = herdr_run({ "tab", "close", M.tab_id })
+	local data = herdr_run({ "tab", "close", M.tab_id })
 
-		if data.error then
-			utils.error("Failed to close herdr tab: " .. data.error.message)
-			return
-		end
+	utils.info("test?")
 
-		M.tab_id = nil
-		M.pane_id = nil
-	end)
+	if data.error then
+		utils.error("Failed to close herdr tab: " .. data.error.message)
+		return false
+	end
+
+	M.tab_id = nil
+	M.pane_id = nil
 
 	return true
 end

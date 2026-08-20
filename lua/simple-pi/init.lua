@@ -16,11 +16,22 @@ local function call_cb(cb, reason, message, value)
 	if reason ~= nil then
 		utils.error(reason .. ": " .. message)
 		if cb ~= nil then
-			cb({ ok = false, reason = reason, message = message, value = nil })
+			-- call_cb could be called from just about anywhere, so we want to
+			vim.schedule(function()
+				local ok, result = pcall(cb, { ok = false, reason = reason, message = message, value = nil })
+				if not ok then
+					utils.error(result)
+				end
+			end)
 		end
 	else
 		if cb ~= nil then
-			cb({ ok = true, reason = nil, message = nil, value = value })
+			vim.schedule(function()
+				local ok, result = pcall(cb, { ok = true, reason = nil, message = nil, value = value })
+				if not ok then
+					utils.error(result)
+				end
+			end)
 		end
 	end
 end
@@ -197,12 +208,15 @@ function M.on_message(msg)
 end
 
 function M.on_connect()
+	local enabled_tools = {}
+
 	local cb = function(d)
+		utils.inspect(d)
 		if not d.ok then
 			utils.raise("Failed to init Pi configuration over socket")
 		end
 
-		utils.info("Connected to Pi :D Tools: " .. table.concat(enabled_tools, ", "))
+		utils.info("Connected to Pi :D")
 	end
 
 	local all_tools = {
@@ -210,8 +224,6 @@ function M.on_connect()
 		"nvim_set_qflist",
 		"nvim_get_register",
 	}
-
-	local enabled_tools = {}
 
 	for _, tool_name in ipairs(all_tools) do
 		if not config.opts.tools.disable_all and config.opts.tools[tool_name].enabled then

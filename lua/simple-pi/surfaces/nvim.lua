@@ -55,7 +55,7 @@ function M.setup(opts)
 	return M
 end
 
-function start_term()
+local function start_term()
 	local jobstart_opts = {
 		cwd = vim.uv.cwd(),
 		on_exit = M.close,
@@ -77,7 +77,7 @@ function start_term()
 	vim.bo[M.buf_id].bufhidden = "hide"
 end
 
-function is_job_valid()
+local function is_job_valid()
 	if M.chan_id == nil then
 		return false
 	end
@@ -128,17 +128,15 @@ function M.open(pi)
 end
 
 function M.close()
-	vim.schedule(function()
-		if M.win_id ~= nil then
-			vim.api.nvim_win_close(M.win_id, true)
-			M.win_id = nil
-		end
-	end)
+	if M.win_id ~= nil then
+		vim.api.nvim_win_close(M.win_id, true)
+		M.win_id = nil
+	end
 
 	return true
 end
 
-function open_in_tab(tab_id)
+local function open_in_tab(tab_id)
 	for _, win_id in ipairs(vim.api.nvim_tabpage_list_wins(tab_id)) do
 		local win_buf_id = vim.api.nvim_win_get_buf(win_id)
 		if win_buf_id == M.buf_id then
@@ -150,7 +148,7 @@ function open_in_tab(tab_id)
 end
 
 -- create the window if needed
-function _focus_window()
+local function _focus_window()
 	local tab_id = vim.api.nvim_get_current_tabpage()
 	local currently_open = open_in_tab(tab_id)
 
@@ -175,7 +173,7 @@ function _focus_window()
 	end
 end
 
-function _focus_tab()
+local function _focus_tab()
 	if M.tab_id == nil then
 		-- tab doesn't exist, create it
 		M.tab_id = vim.api.nvim_open_tabpage(M.buf_id, true, {})

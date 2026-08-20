@@ -17,9 +17,7 @@ function M.inspect(data)
 end
 
 function M.notify(msg, level, opts)
-	vim.schedule(function()
-		pcall(vim.notify, "[simple-pi] " .. msg, level, opts)
-	end)
+	pcall(vim.notify, "[simple-pi] " .. msg, level, opts)
 end
 
 function M.raise(msg)
