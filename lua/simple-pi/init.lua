@@ -283,10 +283,15 @@ function M.paste_line_reference(cb)
 	})
 end
 
-local function get_visual_selection(cb, retain_mode)
+--
+local function get_selection_span(retain_mode)
 	local mode = vim.fn.mode()
+	local buf = vim.api.nvim_get_current_buf()
+
 	if (mode ~= "v") and (mode ~= "V") and (mode ~= "\22") then
-		return call_cb(cb, "error", "Not in visual mode")
+		local win = vim.api.nvim_get_current_win()
+		local line = vim.api.nvim_win_get_cursor(win)
+		return buf, line[1], nil
 	end
 
 	-- unfortunately you need to exit visual mode for the < and > marks to update properly
@@ -311,7 +316,7 @@ function M.paste_range_reference(cb, opts)
 		return
 	end
 
-	local buf, start_line, end_line = get_visual_selection(cb, opts ~= nil and opts.retain_mode or nil)
+	local buf, start_line, end_line = get_selection_span(opts ~= nil and opts.retain_mode or nil)
 	local buf_name = utils.get_buf_name(buf)
 
 	if buf_name == nil then
@@ -319,7 +324,7 @@ function M.paste_range_reference(cb, opts)
 	end
 
 	M.send(cb, "command", "append_text", {
-		lines = { string.format("%s:%d-%d", buf_name, start_line, end_line) },
+		lines = { string.format(end_line == nil and "%s:%d" or "%s:%d-%d", buf_name, start_line, end_line) },
 		as_paragraph = false,
 	})
 end
@@ -332,27 +337,22 @@ function M.test(cb)
 	M.send(cb, "command", "test", {})
 end
 
-function M.paste_selection(cb)
+function M.paste_selection(cb, opts)
 	if not ready_guard(cb) then
 		return
 	end
 
-	local mode = vim.fn.mode()
-	if (mode ~= "v") and (mode ~= "V") and (mode ~= "\22") then
-		return call_cb(cb, "error", "Not in visual mode")
-	end
-
-	local buf, start_line, end_line = get_visual_selection(cb, opts ~= nil and opts.retain_mode or nil)
+	local buf, start_line, end_line = get_selection_span(opts ~= nil and opts.retain_mode or nil)
 	local buf_name = utils.get_buf_name(buf)
 
 	if buf_name == nil then
 		return call_cb(cb, "error", "Buffer is unnamed")
 	end
 
-	local lines = vim.api.nvim_buf_get_lines(buf, start_line, end_line, false)
+	local lines = vim.api.nvim_buf_get_lines(buf, start_line - 1, end_line == nil and start_line or end_line, false)
 
 	local with_header = {
-		string.format("%s:%d-%d", buf_name, start_line, end_line),
+		string.format(end_line == nil and "%s:%d" or "%s:%d-%d", buf_name, start_line, end_line),
 		"```" .. vim.bo[buf].filetype,
 	}
 

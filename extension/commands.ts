@@ -20,7 +20,7 @@ export type CommandHandler<K extends keyof PiCommands> = (
 export const handleAppendText: CommandHandler<"append_text"> = (meta, data) => {
   // TODO: possible to insert where the users' cursor is?
   // there's "pasteToEditor" but that doesn't let us do spacing particularly well...
-  const oldText = meta.ctx.ui.getEditorText();
+  const oldText = meta.ctx.ui.getEditorText().replace(/\n+$/, "");
   const joined = data.lines.join("\n");
 
   let newText = "";
@@ -46,6 +46,9 @@ export const handleAppendText: CommandHandler<"append_text"> = (meta, data) => {
   }
 
   meta.ctx.ui.setEditorText(newText);
+
+  // I don't really like this,
+  // but it forces a repaint which doesn't happen with setEditorText for some reason.
   meta.ctx.ui.notify("[simple-pi] text pasted");
 };
 
