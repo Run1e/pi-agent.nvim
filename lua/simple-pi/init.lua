@@ -65,7 +65,6 @@ function M.setup(opts)
 
 	M.set_handler("nvim_get_qflist", commands.nvim_get_qflist)
 	M.set_handler("nvim_set_qflist", commands.nvim_set_qflist)
-	M.set_handler("nvim_get_register", commands.nvim_get_register)
 
 	M.add_listener("pong", events.pong)
 
@@ -221,7 +220,6 @@ function M.on_connect()
 	local all_tools = {
 		"nvim_get_qflist",
 		"nvim_set_qflist",
-		"nvim_get_register",
 	}
 
 	for _, tool_name in ipairs(all_tools) do
@@ -316,7 +314,7 @@ function M.paste_range_reference(cb, opts)
 		return
 	end
 
-	local buf, start_line, end_line = get_selection_span(opts ~= nil and opts.retain_mode or nil)
+	local buf, start_line, end_line = get_selection_span(opts and opts.retain_mode)
 	local buf_name = utils.get_buf_name(buf)
 
 	if buf_name == nil then
@@ -342,7 +340,7 @@ function M.paste_selection(cb, opts)
 		return
 	end
 
-	local buf, start_line, end_line = get_selection_span(opts ~= nil and opts.retain_mode or nil)
+	local buf, start_line, end_line = get_selection_span(opts and opts.retain_mode)
 	local buf_name = utils.get_buf_name(buf)
 
 	if buf_name == nil then
@@ -360,6 +358,13 @@ function M.paste_selection(cb, opts)
 	table.insert(with_header, "```")
 
 	M.send(cb, "command", "append_text", { lines = with_header, as_paragraph = true })
+end
+
+function M.paste_qflist(cb)
+	local lines = { "Neovim quickfix list (qflist):" }
+	local qflines = commands.nvim_get_qflist(nil)
+	vim.list_extend(lines, qflines)
+	M.send(cb, "command", "append_text", { lines = lines, as_paragraph = true })
 end
 
 return M

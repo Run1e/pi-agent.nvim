@@ -1,28 +1,31 @@
 # simple-pi.nvim
 
-Pragmatic integration between Neovim and the Pi harness.
+Pragmatic integration between Neovim and the [Pi agent harness](https://pi.dev/).
 
 ## Features
 
 - Open Pi in Neovim or a tmux/herdr tab
-- Pass context to your agent; line/range references, text around cursor, selected range, etc
-- Give your agent read/write access to Neovim primitives like the quickfix list, registers, or marks via tools
-- Trigger lua functions on Pi events (`new_session`)
+- Send context directly from Neovim; line/range references, buffer text around cursor, selected range, etc
+- Let your agent read and edit the quickfix list via tools
+- Listen to [Pi events](https://pi.dev/docs/latest/extensions#events) in Neovim through Lua
+- Trigger lua functions on Pi events: `pi.listen("pi:new_session", fn)`
 
-## Tools
+### PLANNED
 
-### `nvim_get_qflist` / `nvim_set_qflist`
+- LSP tools (`nvim_get_diagnostics`)
+- Write Pi messages in Neovim via scratch buffer
+- cmux surface support
+
+### Tools
+
+#### `nvim_get_qflist` / `nvim_set_qflist`
 
 Let your agent access and edit the quickfix list.
 
 Try asking:
-- `what's in my quickfix list?`
+- `explain everything in my quickfix list`
 - `review @file and put issues in my qflist`
 - `find all instances of exception swallowing and put them in my qflist`
-
-### `nvim_get_register`
-
-Let your agent
 
 ## Configuration
 
@@ -93,10 +96,6 @@ require("simple-pi").setup({
 		nvim_set_qflist = {
 			enabled = true,
 			on_update = nil,
-		},
-
-		nvim_get_register = {
-			enabled = true,
 		},
 	},
 })

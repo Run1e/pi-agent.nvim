@@ -58,9 +58,4 @@ function M.nvim_set_qflist(data)
 	return #vim.fn.getqflist()
 end
 
-function M.nvim_get_register(data)
-	local r = data.register or '"'
-	return { register = r, text = vim.fn.getreg(r), type = vim.fn.getregtype(r) }
-end
-
 return M

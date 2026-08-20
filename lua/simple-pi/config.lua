@@ -1,5 +1,3 @@
-local utils = require("simple-pi.utils")
-
 local M = {}
 
 M.default_opts = {
@@ -19,10 +17,6 @@ M.default_opts = {
 		nvim_set_qflist = {
 			enabled = true,
 			on_update = nil,
-		},
-
-		nvim_get_register = {
-			enabled = true,
 		},
 	},
 }
