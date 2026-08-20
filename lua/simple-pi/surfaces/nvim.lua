@@ -199,9 +199,4 @@ function M.focus()
 	return true
 end
 
--- should always be true, we're in neovim
-function M.check()
-	return true
-end
-
 return M

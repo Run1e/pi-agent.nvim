@@ -12,28 +12,27 @@ local listeners = {}
 local timers = {}
 local callbacks = {}
 
-local function call_cb(cb, reason, message, value)
-	if reason ~= nil then
-		utils.error(reason .. ": " .. message)
-		if cb ~= nil then
-			-- call_cb could be called from just about anywhere, so we want to
-			vim.schedule(function()
-				local ok, result = pcall(cb, { ok = false, reason = reason, message = message, value = nil })
+local function call_cb(cb, reason, err, value)
+	-- call_cb could be called from just about anywhere so we want to schedule on the event loop
+	-- so we don't get randomly rekt further down the call stack
+	vim.schedule(function()
+		if err ~= nil then
+			utils.error(reason .. ": " .. err)
+			if cb ~= nil then
+				local ok, result = pcall(cb, { ok = false, reason = reason, error = err, value = nil })
 				if not ok then
 					utils.error(result)
 				end
-			end)
-		end
-	else
-		if cb ~= nil then
-			vim.schedule(function()
-				local ok, result = pcall(cb, { ok = true, reason = nil, message = nil, value = value })
+			end
+		else
+			if cb ~= nil then
+				local ok, result = pcall(cb, { ok = true, reason = nil, error = nil, value = value })
 				if not ok then
 					utils.error(result)
 				end
-			end)
+			end
 		end
-	end
+	end)
 end
 
 local function clear_correlation(correlation_id)
@@ -73,13 +72,13 @@ function M.setup(opts)
 	M.add_listener("command_success", function(data)
 		local cb = callbacks[data.correlation_id]
 		clear_correlation(data.correlation_id)
-		call_cb(cb, nil, nil, data.value)
+		call_cb(cb, "command_success", nil, data.value)
 	end)
 
 	M.add_listener("command_failure", function(data)
 		local cb = callbacks[data.correlation_id]
 		clear_correlation(data.correlation_id)
-		call_cb(cb, "command_failure", "Pi extension exception with message: " .. data.message)
+		call_cb(cb, "command_failure", "Pi extension exception with error: " .. data.error)
 	end)
 
 	setup_completed = true
@@ -151,6 +150,7 @@ function M.send(cb, type, name, data)
 	-- for commands we want to check for acks/nacks returning
 	if type == "command" then
 		timer = vim.uv.new_timer()
+		assert(timer, "failed to create timer?")
 		timers[correlation_id] = timer
 
 		timer:start(1000, 0, function()
@@ -195,7 +195,7 @@ function M.on_message(msg)
 			else
 				M.send(nil, "event", "command_failure", {
 					correlation_id = msg.correlation_id,
-					message = tostring(value),
+					error = tostring(value),
 				})
 				utils.error("Command handler for '" .. msg.name .. "' failed: " .. value)
 			end
@@ -211,7 +211,6 @@ function M.on_connect()
 	local enabled_tools = {}
 
 	local cb = function(d)
-		utils.inspect(d)
 		if not d.ok then
 			utils.raise("Failed to init Pi configuration over socket")
 		end

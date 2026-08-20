@@ -104,7 +104,7 @@ export class Dispatcher {
 
       failureUnsubscribe = this.addListener("command_failure", (data) => {
         if (data.correlation_id !== newCorrelationId) return;
-        reject(new Error(data.message));
+        reject(new Error(data.error));
       });
     }).finally(() => {
       try {
@@ -155,7 +155,7 @@ export class Dispatcher {
         type: "event",
         name: "command_failure",
         correlation_id: command.correlation_id,
-        data: { correlation_id: command.correlation_id, message: e.message },
+        data: { correlation_id: command.correlation_id, error: e.message },
       });
       return;
     }

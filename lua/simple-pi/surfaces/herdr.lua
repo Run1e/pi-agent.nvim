@@ -93,8 +93,6 @@ function M.close()
 	-- I mean it's kind of semantically what close would mean in this situation
 	local data = herdr_run({ "tab", "close", M.tab_id })
 
-	utils.info("test?")
-
 	if data.error then
 		utils.error("Failed to close herdr tab: " .. data.error.message)
 		return false
@@ -118,11 +116,6 @@ function M.focus()
 		return false
 	end
 
-	return true
-end
-
--- check if herdr binary exists
-function M.check()
 	return true
 end
 

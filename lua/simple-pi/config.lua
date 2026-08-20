@@ -36,10 +36,6 @@ function M.setup(opts)
 	if M.opts.surface == nil then
 		M.opts.surface = require("simple-pi.surfaces.nvim")
 	end
-
-	if not M.opts.surface.check() then
-		utils.error("Failed to perform surface checks")
-	end
 end
 
 return M
