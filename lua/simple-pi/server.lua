@@ -1,3 +1,5 @@
+local utils = require("simple-pi.utils")
+
 local M = {}
 
 M.pipe = nil
@@ -18,12 +20,18 @@ function M.start(path, on_connect, on_disconnect, on_message)
 
 	M.pipe = vim.uv.new_pipe(false)
 
-	M.pipe:bind(path)
-	if vim.uv.fs_chmod(path, tonumber("600", 8)) ~= true then
-		vim.notify("Failed to chmod 600 socket file?", vim.log.levels.WARN)
+	if M.pipe:bind(path) ~= 0 then
+		utils.raise("Failed to bind to socket")
 	end
 
-	M.pipe:listen(1, M.on_accept)
+	if vim.uv.fs_chmod(path, tonumber("600", 8)) ~= true then
+		utils.warn("Failed to chmod 600 socket file?")
+	end
+
+	if M.pipe:listen(1, M.on_accept) ~= 0 then
+		utils.raise("Failed to start socket listener")
+	end
+
 	M.pipe:unref()
 end
 
@@ -35,103 +43,140 @@ function M.is_active()
 	return M.client:is_active()
 end
 
-function maybe_promote_pending()
-	if M.pending_client == nil then
+function M.send(data)
+	if not M.is_active() then
 		return
 	end
 
-	local pending = M.pending_client
-	M.pending_client = nil
-	promote_client(pending)
+	local ok, data = pcall(vim.json.encode, data)
+	if not ok then
+		utils.error("Failed to encode json data")
+		return
+	end
+
+	M.client:write(data .. "\n", function(err)
+		-- close socket on write error
+		if err then
+			M.close()
+		end
+	end)
 end
 
-function promote_client(client)
+function M.close(inhibit_promote)
+	if M.client == nil then
+		return
+	end
+
+	M.client:close(function()
+		pcall(M.on_disconnect)
+		if inhibit_promote ~= true then
+			M.maybe_promote_pending()
+		end
+	end)
+end
+
+function M.promote_client(client)
 	M.client = client
 	M.pending_client = nil
 
 	local buffer = ""
 
 	client:read_start(function(err, data)
-		if err or data == nil or not data or data == "" then
-			-- TODO: concern -- will we never call on_disconnect if client pipe is already closing?
+		if err then
+			-- handle read error
+			M.close()
+		elseif data then
+			-- handle data
+			buffer = buffer .. data
 
-			if not client:is_closing() then
-				if M.client == client then
-					M.client = nil
+			local nl
+			while true do
+				nl = buffer:find("\n", 1, true)
+				if not nl then
+					break
 				end
+				local line = buffer:sub(1, nl - 1)
+				buffer = buffer:sub(nl + 1)
+				if line ~= "" then
+					local ok, msg = pcall(vim.json.decode, line)
 
-				client:close(function()
-					pcall(M.on_disconnect)
-					maybe_promote_pending()
-				end)
-			end
-
-			return
-		end
-
-		buffer = buffer .. data
-
-		local nl
-		while true do
-			nl = buffer:find("\n", 1, true)
-			if not nl then
-				break
-			end
-			local line = buffer:sub(1, nl - 1)
-			buffer = buffer:sub(nl + 1)
-			if line ~= "" then
-				local ok, msg = pcall(vim.json.decode, line)
-				-- TODO: probably want to properly abandon if !ok
-				if ok and M.on_message then
-					vim.schedule(function()
-						M.on_message(msg)
-					end)
+					if not ok then
+						vim.schedule(function()
+							utils.error("Bad JSON from client, closing")
+							M.close()
+						end)
+					elseif M.on_message then
+						vim.schedule(function()
+							M.on_message(msg)
+						end)
+					end
 				end
 			end
+		else
+			-- handle eof (disconnect)
+			M.close()
 		end
 	end)
 
-	M.on_connect()
+	vim.schedule(function()
+		M.on_connect()
+	end)
+end
+
+function M.maybe_promote_pending()
+	if M.pending_client == nil then
+		return
+	end
+
+	if M.client and M.client:is_active() then
+		M.pending_client:close()
+		M.pending_client = nil
+		return
+	end
+
+	M.promote_client(M.pending_client)
 end
 
 function M.on_accept()
 	local pending = vim.uv.new_pipe(false)
 	assert(pending)
 
-	M.pipe:accept(pending)
+	if M.pipe:accept(pending) ~= 0 then
+		error("[simple-pi] Failed accepting new client connection")
+	end
 
-	if M.client ~= nil then
-		-- immediately close if we have a healthy client
-		if M.is_active() then
-			pending:close()
-			return
-		end
-
-		if M.pending_client ~= nil then
-			-- already a pending client, just close this
-			pending:close()
-		else
-			M.pending_client = pending
-		end
-
+	if M.pending_client == nil then
+		-- pending slot open, set it
+		M.pending_client = pending
+	else
+		-- pending isn't even open, reject connection
+		pending:close()
 		return
 	end
 
-	promote_client(pending)
-end
-
-function M.send(data)
-	if not M.is_active() then
-		return
-	end
-
-	M.client:write(vim.json.encode(data) .. "\n")
+	M.maybe_promote_pending()
 end
 
 function M.stop()
-	-- TODO: actually close server?
-	if M.path then
-		os.remove(M.path)
+	if M.pending_client then
+		M.pending_client:close()
+		M.pending_client = nil
+	end
+
+	if M.client then
+		M.close(true)
+		M.client = nil
+	end
+
+	if M.pipe then
+		local path = M.path
+		M.path = nil
+		M.pipe:close(function()
+			if path then
+				os.remove(path)
+			end
+		end)
+		M.pipe = nil
 	end
 end
 

@@ -14,7 +14,7 @@ local callbacks = {}
 
 local function call_cb(cb, reason, message, value)
 	if reason ~= nil then
-		vim.notify("simple-pi " .. reason .. ": " .. message, vim.log.levels.ERROR)
+		utils.error(reason .. ": " .. message)
 		if cb ~= nil then
 			cb({ ok = false, reason = reason, message = message, value = nil })
 		end
@@ -28,6 +28,7 @@ end
 local function clear_correlation(correlation_id)
 	local timer = timers[correlation_id]
 	if timer ~= nil and timer:is_active() then
+		timer:stop()
 		timer:close()
 	end
 
@@ -47,8 +48,8 @@ function M.setup(opts)
 	M.socket_path = nil
 
 	M.set_handler("testcommand", function(data)
-		vim.notify("in testcommand")
-		vim.notify(vim.inspect(data))
+		utils.info("in testcommand")
+		utils.inspect(data)
 		return { ret = "value" }
 	end)
 
@@ -67,7 +68,7 @@ function M.setup(opts)
 	M.add_listener("command_failure", function(data)
 		local cb = callbacks[data.correlation_id]
 		clear_correlation(data.correlation_id)
-		call_cb(cb, "failure", data.message)
+		call_cb(cb, "command_failure", "Pi extension exception with message: " .. data.message)
 	end)
 
 	setup_completed = true
@@ -99,13 +100,12 @@ function M.get_surface(name)
 	}
 
 	if not default_surfaces[name] then
-		vim.notify(
+		utils.error(
 			string.format(
 				"'%s' is not a valid surface, options are %s. Defaulting to 'nvim'.",
 				name,
 				table.concat(vim.tbl_keys(default_surfaces), ", ")
-			),
-			vim.log.levels.ERROR
+			)
 		)
 
 		name = "nvim"
@@ -196,11 +196,33 @@ function M.on_message(msg)
 end
 
 function M.on_connect()
-	vim.notify("Connected to Pi :D")
+	local cb = function(d)
+		if not d.ok then
+			utils.raise("Failed to init Pi configuration over socket")
+		end
+
+		utils.info("Connected to Pi :D Tools: " .. table.concat(enabled_tools, ", "))
+	end
+
+	local all_tools = {
+		"nvim_get_qflist",
+		"nvim_set_qflist",
+		"nvim_get_register",
+	}
+
+	local enabled_tools = {}
+
+	for _, tool_name in ipairs(all_tools) do
+		if not config.opts.tools.disable_all and config.opts.tools[tool_name].enabled then
+			table.insert(enabled_tools, tool_name)
+		end
+	end
+
+	M.send(cb, "command", "init", { enabled_tools = enabled_tools })
 end
 
 function M.on_disconnect()
-	vim.notify("Pi disconnected D:")
+	utils.info("Pi disconnected D:")
 
 	if config.opts.close_on_disconnect then
 		config.opts.surface.close()

@@ -1,5 +1,31 @@
 local M = {}
 
+function M.info(msg, opts)
+	M.notify(msg, vim.log.levels.INFO, opts)
+end
+
+function M.warn(msg, opts)
+	M.notify(msg, vim.log.levels.WARN, opts)
+end
+
+function M.error(msg, opts)
+	M.notify(msg, vim.log.levels.ERROR, opts)
+end
+
+function M.inspect(data)
+	M.info(vim.inspect(data))
+end
+
+function M.notify(msg, level, opts)
+	vim.schedule(function()
+		pcall(vim.notify, "[simple-pi] " .. msg, level, opts)
+	end)
+end
+
+function M.raise(msg)
+	error("[simple-pi] " .. msg)
+end
+
 function M.make_session_name()
 	return string.format("simple-pi-%s-%03d", os.date("%Y-%m-%dT%H-%M-%S"), vim.uv.now() % 1000)
 end
@@ -23,9 +49,9 @@ function M.get_socket_dir()
 	return ideal_dir
 end
 
-function M.make_pi_launch_command(session_name)
+function M.make_pi_launch_command(pi_bin, session_name)
 	return {
-		"pi",
+		pi_bin,
 		"-e",
 		M.get_extension_path(),
 		"--session-id",

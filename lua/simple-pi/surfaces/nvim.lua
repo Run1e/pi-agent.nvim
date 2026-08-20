@@ -64,7 +64,10 @@ function start_term()
 		term = true,
 	}
 
-	M.chan_id = vim.fn.jobstart(utils.make_pi_launch_command(require("simple-pi")), jobstart_opts)
+	M.chan_id = vim.fn.jobstart(
+		utils.make_pi_launch_command(config.opts.pi_bin, require("simple-pi").session_name),
+		jobstart_opts
+	)
 	-- TODO: return of < 1 means error, log it
 
 	vim.bo[M.buf_id].bufhidden = "hide"
