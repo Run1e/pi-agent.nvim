@@ -1,4 +1,5 @@
 local utils = require("simple-pi.utils")
+local config = require("simple-pi.config")
 
 local M = {}
 
@@ -18,8 +19,6 @@ M.buf_id = nil
 M.chan_id = nil
 
 M.autocmd_id = nil
-
--- TODO: double-check all of these failure paths (do we always get json.error with .message?)
 
 function M.setup(opts)
 	M.opts = vim.tbl_deep_extend("force", vim.deepcopy(M.default_opts), opts or {})
@@ -64,12 +63,17 @@ function start_term()
 		term = true,
 	}
 
-	M.chan_id = vim.fn.jobstart(
+	local result = vim.fn.jobstart(
 		utils.make_pi_launch_command(config.opts.pi_bin, require("simple-pi").session_name),
 		jobstart_opts
 	)
-	-- TODO: return of < 1 means error, log it
 
+	if result < 1 then
+		utils.error("Failed to jobstart Pi in Nvim surface")
+		return
+	end
+
+	M.chan_id = result
 	vim.bo[M.buf_id].bufhidden = "hide"
 end
 

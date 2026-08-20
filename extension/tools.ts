@@ -15,7 +15,7 @@ export function registerTools(
       label: "Neovim get quickfix list",
       description: "Retrieves the Neovim quickfix list",
       promptGuidelines: [
-        "Use nvim_get_qflist when you need to access the Neovim quickfix list (qflist)",
+        "Use nvim_get_qflist when you need to access the Neovim quickfix list (qflist).",
       ],
       parameters: Type.Object({}),
 
@@ -48,9 +48,10 @@ export function registerTools(
       label: "Neovim set quickfix list",
       description: "Set the Neovim quickfix list",
       promptGuidelines: [
-        "Use nvim_set_qflist when you need to set the Neovim quickfix list (qflist)",
-        "You may suggest to put data in the quickfix list for user convenience (like if you have a list of lines with errors, improvements, suggestions, etc)",
-        "You can one-shot a full replacement of the quickfix list, or you can incrementally append with several nvim_set_qflist calls",
+        "Use nvim_set_qflist when you need to set the Neovim quickfix list (qflist).",
+        "You may suggest to put data in the quickfix list for user convenience (like if you have a list of lines with errors, improvements, suggestions, etc).",
+        "You can replace the entire quickfix list in one call with action = replace, or you can incrementally append over several calls with action = append.",
+        "If the user asks you to add a filename:lnum to the quickfix list, you may not need to read the file for context at all -- just call this tool and add it.",
       ],
       parameters: Type.Object({
         action: Type.Enum(["replace", "append"], {
@@ -67,10 +68,10 @@ export function registerTools(
               description: "Column number (1-based)",
               default: 1,
             }),
-            text: Type.Optional(
+            special_comment: Type.Optional(
               Type.String({
                 description:
-                  "Text show for this entry. Extracted from file if omitted",
+                  "DO NOT put line contents here, prefer to omit this field. ONLY set this if you want to set a custom comment for this quickfix list entry",
               }),
             ),
           }),
@@ -79,23 +80,20 @@ export function registerTools(
       }),
 
       async execute(toolCallId, params, signal, onUpdate, ctx) {
-        const success: boolean = (await dispatcher.invokeCommand(
+        const entryCount: number = (await dispatcher.invokeCommand(
           "nvim_set_qflist",
           params,
-        )) as boolean;
+        )) as number;
 
-        if (success) {
-          return {
-            content: [{ type: "text", text: "Quickfix list updated" }],
-            details: {},
-          };
-        } else {
-          return {
-            content: [{ type: "text", text: "Failed setting the qflist" }],
-            details: {},
-            isError: true,
-          };
-        }
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Quickfix list successfully updated, currently has ${entryCount} entries`,
+            },
+          ],
+          details: {},
+        };
       },
     });
   }
@@ -106,8 +104,8 @@ export function registerTools(
       label: "Neovim get register",
       description: "Get a Neovim register",
       promptGuidelines: [
-        "Use nvim_get_register when you need to get the value of a Neovim register",
-        "% = current buffer, # = alternate buffer, : = previous command",
+        "Use nvim_get_register when you need to get the value of a Neovim register.",
+        "% = current buffer, # = alternate buffer, : = previous command.",
       ],
       parameters: Type.Object({
         register: Type.String({ description: "Register name" }),

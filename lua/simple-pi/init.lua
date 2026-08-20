@@ -186,6 +186,7 @@ function M.on_message(msg)
 					correlation_id = msg.correlation_id,
 					message = tostring(value),
 				})
+				utils.error("Command handler for '" .. msg.name .. "' failed: " .. value)
 			end
 		end
 	elseif msg.type == "event" then

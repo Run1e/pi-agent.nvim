@@ -18,7 +18,7 @@ M.default_opts = {
 
 		nvim_set_qflist = {
 			enabled = true,
-			on_edit = nil,
+			on_update = nil,
 		},
 
 		nvim_get_register = {

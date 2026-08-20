@@ -3,19 +3,17 @@ local config = require("simple-pi.config")
 
 local M = {}
 
-M.default_opts = {}
+M.default_opts = {
+	herdr_bin = "herdr",
+}
 
 M.opts = vim.deepcopy(M.default_opts)
 
 M.tab_id = nil
 M.pane_id = nil
 
--- TODO: double-check all of these failure paths (do we always get json.error with .message?)
-
 local function herdr_run(args)
-	local ok, output, data
-
-	local cmd = { "herdr" }
+	local cmd = { M.opts.herdr_bin }
 	vim.list_extend(cmd, args)
 
 	local completed = vim.system(cmd, { text = true }):wait(1000)
@@ -33,7 +31,7 @@ local function herdr_run(args)
 		return {}
 	end
 
-	ok, data = pcall(vim.json.decode, completed.stdout)
+	local ok, data = pcall(vim.json.decode, completed.stdout)
 
 	if not ok then
 		return {
@@ -91,11 +89,11 @@ function M.open(pi)
 end
 
 function M.close()
-	-- TODO: should we check if pi is even still running in the tab before we close it?
+	-- this will kill the pi instance if it's still running there? do we even want that?
+	-- I mean it's kind of semantically what close would mean in this situation
 	vim.schedule(function()
 		local data = herdr_run({ "tab", "close", M.tab_id })
 
-		-- TODO: check actual output
 		if data.error then
 			utils.error("Failed to close herdr tab: " .. data.error.message)
 			return

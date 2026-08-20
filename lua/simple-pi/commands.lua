@@ -1,27 +1,7 @@
 local utils = require("simple-pi.utils")
+local config = require("simple-pi.config")
 
 local M = {}
-
--- Returns a |List| with all the current quickfix errors.  Each
--- list item is a dictionary with these entries:
---     bufnr	number of buffer that has the file name, use
---         |bufname()| to get the name
---     module	module name
---     lnum	line number in the buffer (first line is 1)
---     end_lnum
---         end of line number if the item is multiline
---     col	column number (first column is 1)
---     end_col	end of column number if the item has range
---     vcol	|TRUE|: "col" is visual column
---         |FALSE|: "col" is byte index
---     nr	error number
---     pattern	search pattern used to locate the error
---     text	description of the error
---     type	type of the error, 'E', '1', etc.
---     valid	|TRUE|: recognized error message
---     user_data
---         custom data associated with the item, can be
---         any type.
 
 function M.nvim_get_qflist(data)
 	local out = {}
@@ -38,11 +18,25 @@ end
 function M.nvim_set_qflist(data)
 	local items = {}
 	for _, e in ipairs(data.entries) do
+		local filename = vim.fn.fnamemodify(e.file, ":p")
+		local text
+
+		if e.special_comment == nil then
+			-- TODO: this is a really naive way to go about this
+			-- we should check if a buffer is already open with the file
+			local ok, lines = pcall(vim.fn.readfile, filename, "", e.lnum)
+			if ok and lines[#lines] ~= nil then
+				text = lines[#lines]
+			end
+		else
+			text = e.special_comment
+		end
+
 		table.insert(items, {
-			filename = vim.fn.fnamemodify(e.file, ":p"),
+			filename = filename,
 			lnum = e.lnum,
 			col = e.col,
-			text = e.text or "?", -- TODO: if nil, get the line text ourselves
+			text = text,
 		})
 	end
 
@@ -52,7 +46,16 @@ function M.nvim_set_qflist(data)
 	}
 
 	local result = vim.fn.setqflist(items, action_map[data.action])
-	return result == 0
+	if result ~= 0 then
+		utils.raise("Failed setting quickfix list, result code: " .. tostring(result))
+	end
+
+	local on_update = config.opts.tools.nvim_set_qflist.on_update
+	if on_update ~= nil then
+		on_update()
+	end
+
+	return #vim.fn.getqflist()
 end
 
 function M.nvim_get_register(data)

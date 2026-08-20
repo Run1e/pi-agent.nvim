@@ -175,7 +175,9 @@ export class Dispatcher {
       try {
         listener(event.data);
       } catch (e: any) {
-        // TODO: some kind of logging?
+        this.ctx.ui.notify(
+          `Event listener for event '${event.name}' threw: ${e.message}`,
+        );
         continue;
       }
     }
@@ -201,8 +203,11 @@ export class Dispatcher {
 
   dispatch(msg: unknown) {
     if (this.isCommand(msg)) {
-      // TODO: maybe print the error or something lol
-      this.handleCommand(msg).catch((_) => {});
+      this.handleCommand(msg).catch((e) => {
+        this.ctx.ui.notify(
+          `Command handler for command '${msg.name}' threw: ${e.message}`,
+        );
+      });
     } else if (this.isEvent(msg)) {
       this.handleEvent(msg);
     }
