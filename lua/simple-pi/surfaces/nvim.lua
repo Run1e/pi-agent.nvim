@@ -1,8 +1,18 @@
-local utils = require("simple-pi.utils")
 local config = require("simple-pi.config")
+local utils = require("simple-pi.utils")
 
+---Surface that runs pi in a terminal buffer inside Neovim.
+---(implements simple_pi.Surface, declared in simple-pi/config.lua)
 local M = {}
 
+---Surface options.
+---@class simple_pi.NvimSurfaceOpts
+---@field open_in "window"|"tab"
+---@field auto_insert_on_focus boolean
+---@field split string
+---@field size_ratio number
+
+---@type simple_pi.NvimSurfaceOpts
 M.default_opts = {
 	-- "window" | "tab"
 	open_in = "window",
@@ -11,15 +21,26 @@ M.default_opts = {
 	size_ratio = 0.4,
 }
 
+---@type simple_pi.NvimSurfaceOpts
 M.opts = vim.deepcopy(M.default_opts)
 
+---@type integer?
 M.tab_id = nil
+
+---@type integer?
 M.win_id = nil
+
+---@type integer?
 M.buf_id = nil
+
+---@type integer?
 M.chan_id = nil
 
+---@type integer?
 M.autocmd_id = nil
 
+---@param opts table?
+---@return simple_pi.Surface
 function M.setup(opts)
 	M.opts = vim.tbl_deep_extend("force", vim.deepcopy(M.default_opts), opts or {})
 
@@ -55,6 +76,7 @@ function M.setup(opts)
 	return M
 end
 
+---Launch the pi job in the surface buffer.
 local function start_term()
 	local jobstart_opts = {
 		cwd = vim.uv.cwd(),
@@ -64,7 +86,7 @@ local function start_term()
 	}
 
 	local result = vim.fn.jobstart(
-		utils.make_pi_launch_command(config.opts.pi_bin, require("simple-pi").session_name),
+		utils.make_pi_launch_command(config.get_opts().pi_bin, assert(require("simple-pi").session_name)),
 		jobstart_opts
 	)
 
@@ -73,10 +95,16 @@ local function start_term()
 		return
 	end
 
+	if M.buf_id == nil then
+		return
+	end
+
 	M.chan_id = result
 	vim.bo[M.buf_id].bufhidden = "hide"
 end
 
+---True if the pi job is still running and attached to our buffer.
+---@return boolean
 local function is_job_valid()
 	if M.chan_id == nil then
 		return false
@@ -99,6 +127,9 @@ local function is_job_valid()
 	return true
 end
 
+---Open (or reuse) the surface and start the pi job if needed.
+---@param pi simple_pi
+---@return boolean
 function M.open(pi)
 	local has_valid_job = is_job_valid()
 
@@ -127,6 +158,8 @@ function M.open(pi)
 	return true
 end
 
+---Close the surface window.
+---@return boolean
 function M.close()
 	if M.win_id ~= nil then
 		vim.api.nvim_win_close(M.win_id, true)
@@ -136,6 +169,9 @@ function M.close()
 	return true
 end
 
+---True if the surface buffer is visible in the given tabpage.
+---@param tab_id integer
+---@return boolean
 local function open_in_tab(tab_id)
 	for _, win_id in ipairs(vim.api.nvim_tabpage_list_wins(tab_id)) do
 		local win_buf_id = vim.api.nvim_win_get_buf(win_id)
@@ -147,8 +183,12 @@ local function open_in_tab(tab_id)
 	return false
 end
 
--- create the window if needed
+---Create the window if needed and focus it.
 local function _focus_window()
+	if M.buf_id == nil then
+		return
+	end
+
 	local tab_id = vim.api.nvim_get_current_tabpage()
 	local currently_open = open_in_tab(tab_id)
 
@@ -169,11 +209,16 @@ local function _focus_window()
 		-- vim.api.nvim_win_set_buf(M.win_id, M.buf_id)
 		M.win_id = vim.api.nvim_open_win(M.buf_id, true, cfg)
 	else
-		vim.api.nvim_set_current_win(M.win_id)
+		vim.api.nvim_set_current_win(assert(M.win_id))
 	end
 end
 
+---Create the tab if needed and focus it.
 local function _focus_tab()
+	if M.buf_id == nil then
+		return
+	end
+
 	if M.tab_id == nil then
 		-- tab doesn't exist, create it
 		M.tab_id = vim.api.nvim_open_tabpage(M.buf_id, true, {})
@@ -189,6 +234,8 @@ local function _focus_tab()
 	end
 end
 
+---Focus the surface window/tab.
+---@return boolean
 function M.focus()
 	if M.opts.open_in == "window" then
 		_focus_window()

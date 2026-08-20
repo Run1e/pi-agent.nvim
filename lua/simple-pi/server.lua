@@ -2,16 +2,40 @@ local utils = require("simple-pi.utils")
 
 local M = {}
 
+---@class simple_pi.Message
+---@field correlation_id number
+---@field type "command"|"event"
+---@field name string
+---@field data any
+
+---@type uv.uv_pipe_t?
 M.pipe = nil
+
+---@type uv.uv_pipe_t?
 M.client = nil
+
+---@type uv.uv_pipe_t?
 M.pending_client = nil
 
+---@type string?
 M.path = nil
+
+---@type fun()?
 M.on_connect = nil
+
+---@type fun()?
 M.on_disconnect = nil
 
+---@type fun(msg: simple_pi.Message)?
+M.on_message = nil
+
+---@param path string
+---@param on_connect fun()
+---@param on_disconnect fun()
+---@param on_message fun(msg: simple_pi.Message)
 function M.start(path, on_connect, on_disconnect, on_message)
 	M.path = path
+
 	M.on_connect = on_connect
 	M.on_disconnect = on_disconnect
 	M.on_message = on_message
@@ -35,26 +59,28 @@ function M.start(path, on_connect, on_disconnect, on_message)
 	M.pipe:unref()
 end
 
+---@return boolean
 function M.is_active()
 	if M.client == nil then
 		return false
 	end
 
-	return M.client:is_active()
+	return M.client:is_active() == true
 end
 
+---@param data table
 function M.send(data)
 	if not M.is_active() then
 		return
 	end
 
-	local ok, data = pcall(vim.json.encode, data)
+	local ok, encoded = pcall(vim.json.encode, data)
 	if not ok then
 		utils.error("Failed to encode json data")
 		return
 	end
 
-	M.client:write(data .. "\n", function(err)
+	M.client:write(encoded .. "\n", function(err)
 		-- close socket on write error
 		if err then
 			M.close()
@@ -62,19 +88,21 @@ function M.send(data)
 	end)
 end
 
+---@param inhibit_promote boolean?
 function M.close(inhibit_promote)
 	if M.client == nil then
 		return
 	end
 
 	M.client:close(function()
-		vim.schedule(M.on_disconnect)
+		vim.schedule(assert(M.on_disconnect))
 		if inhibit_promote ~= true then
 			M.maybe_promote_pending()
 		end
 	end)
 end
 
+---@param client uv.uv_pipe_t
 function M.promote_client(client)
 	M.client = client
 	M.pending_client = nil
@@ -117,7 +145,7 @@ function M.promote_client(client)
 		end
 	end)
 
-	vim.schedule(M.on_connect)
+	vim.schedule(assert(M.on_connect))
 end
 
 function M.maybe_promote_pending()

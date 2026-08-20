@@ -1,9 +1,22 @@
-local utils = require("simple-pi.utils")
 local config = require("simple-pi.config")
+local utils = require("simple-pi.utils")
 
 local M = {}
 
+---@class simple_pi.QflistEntry
+---@field file string
+---@field lnum integer
+---@field col integer
+---@field special_comment string?
+
+---@class simple_pi.QflistRequest
+---@field entries simple_pi.QflistEntry[]
+---@field action "replace"|"append"
+
+---@param data nil
+---@return string[]
 function M.nvim_get_qflist(data)
+	---@type string[]
 	local out = {}
 	local list = vim.fn.getqflist()
 	for _, entry in ipairs(list) do
@@ -15,10 +28,14 @@ function M.nvim_get_qflist(data)
 	return out
 end
 
+---@param data simple_pi.QflistRequest
+---@return integer
 function M.nvim_set_qflist(data)
+	---@type table[]
 	local items = {}
 	for _, e in ipairs(data.entries) do
 		local filename = vim.fn.fnamemodify(e.file, ":p")
+		---@type string?
 		local text
 
 		if e.special_comment == nil then
@@ -50,7 +67,7 @@ function M.nvim_set_qflist(data)
 		utils.raise("Failed setting quickfix list, result code: " .. tostring(result))
 	end
 
-	local on_update = config.opts.tools.nvim_set_qflist.on_update
+	local on_update = config.get_opts().tools.nvim_set_qflist.on_update
 	if on_update ~= nil then
 		on_update()
 	end

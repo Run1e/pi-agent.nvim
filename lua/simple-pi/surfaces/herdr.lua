@@ -1,18 +1,33 @@
-local utils = require("simple-pi.utils")
 local config = require("simple-pi.config")
+local utils = require("simple-pi.utils")
 
+---Surface that drives an external herdr tab/pane via its CLI.
+---(implements simple_pi.Surface, declared in simple-pi/config.lua)
 local M = {}
 
+---Result of a herdr CLI invocation.
+---@class simple_pi.HerdrResult
+---@field error { message: string }?
+---@field result table?
+
+---@type { herdr_bin: string }
 M.default_opts = {
 	herdr_bin = "herdr",
 }
 
 M.opts = vim.deepcopy(M.default_opts)
 
+---@type string?
 M.tab_id = nil
+
+---@type string?
 M.pane_id = nil
 
+---Run a herdr CLI subcommand and decode its JSON output.
+---@param args string[]
+---@return simple_pi.HerdrResult
 local function herdr_run(args)
+	---@type string[]
 	local cmd = { M.opts.herdr_bin }
 	vim.list_extend(cmd, args)
 
@@ -48,11 +63,16 @@ local function herdr_run(args)
 	return data
 end
 
+---@param opts table?
+---@return simple_pi.Surface
 function M.setup(opts)
 	M.opts = vim.tbl_deep_extend("force", vim.deepcopy(M.default_opts), opts or {})
 	return M
 end
 
+---Create a herdr tab and launch pi in its root pane.
+---@param pi simple_pi
+---@return boolean?
 function M.open(pi)
 	M.tab_id = nil
 	M.pane_id = nil
@@ -71,13 +91,14 @@ function M.open(pi)
 	M.tab_id = data.result.tab.tab_id
 	M.pane_id = data.result.root_pane.pane_id
 
+	---@type string[]
 	local cmd = {
 		"pane",
 		"run",
 		M.pane_id,
 	}
 
-	vim.list_extend(cmd, utils.make_pi_launch_command(config.opts.pi_bin, pi.session_name))
+	vim.list_extend(cmd, utils.make_pi_launch_command(config.get_opts().pi_bin, assert(pi.session_name)))
 
 	data = herdr_run(cmd)
 	if data.error then
@@ -88,9 +109,15 @@ function M.open(pi)
 	return true
 end
 
+---Close the herdr tab.
+---@return boolean
 function M.close()
 	-- this will kill the pi instance if it's still running there? do we even want that?
 	-- I mean it's kind of semantically what close would mean in this situation
+	if M.tab_id == nil then
+		return true
+	end
+
 	local data = herdr_run({ "tab", "close", M.tab_id })
 
 	if data.error then
@@ -104,6 +131,8 @@ function M.close()
 	return true
 end
 
+---Focus the herdr tab.
+---@return boolean
 function M.focus()
 	if M.tab_id == nil or M.pane_id == nil then
 		return false

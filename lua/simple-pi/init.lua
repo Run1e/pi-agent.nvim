@@ -1,23 +1,63 @@
-local config = require("simple-pi.config")
-local server = require("simple-pi.server")
 local commands = require("simple-pi.commands")
+local config = require("simple-pi.config")
 local events = require("simple-pi.events")
+local server = require("simple-pi.server")
 local utils = require("simple-pi.utils")
 
+---@class simple_pi.CallbackResult
+---@field ok boolean
+---@field reason string? like "command_success", "command_failure", "timeout", "error"
+---@field error string?
+---@field value any?
+
+---@alias simple_pi.PiCallback fun(result: simple_pi.CallbackResult)
+---@alias simple_pi.CommandHandler fun(data: any): any?
+---@alias simple_pi.EventListener fun(data: any)
+
+---@class simple_pi.CommandSuccessData
+---@field correlation_id number
+---@field value any
+
+---@class simple_pi.CommandFailureData
+---@field correlation_id number
+---@field error string
+
+---@class simple_pi
 local M = {}
 
 local setup_completed = false
+
+---@type table<string, simple_pi.CommandHandler>
 local handlers = {}
+
+---@type table<string, simple_pi.EventListener[]>
 local listeners = {}
+
+---@type table<number, any>
 local timers = {}
+
+---@type table<number, simple_pi.PiCallback>
 local callbacks = {}
 
-local function call_cb(cb, reason, err, value)
+---@type string?
+M.session_name = nil
+
+---@type string?
+M.socket_path = nil
+
+---@type integer
+M.next_id = 1
+
+---@param cb simple_pi.PiCallback?
+---@param reason string?
+---@param err string?
+---@param value any?
+local function invoke_cb(cb, reason, err, value)
 	-- call_cb could be called from just about anywhere so we want to schedule on the event loop
 	-- so we don't get randomly rekt further down the call stack
 	vim.schedule(function()
 		if err ~= nil then
-			utils.error(reason .. ": " .. err)
+			utils.error((reason or "") .. ": " .. err)
 			if cb ~= nil then
 				local ok, result = pcall(cb, { ok = false, reason = reason, error = err, value = nil })
 				if not ok then
@@ -35,6 +75,7 @@ local function call_cb(cb, reason, err, value)
 	end)
 end
 
+---@param correlation_id number
 local function clear_correlation(correlation_id)
 	local timer = timers[correlation_id]
 	if timer ~= nil and timer:is_active() then
@@ -46,6 +87,7 @@ local function clear_correlation(correlation_id)
 	callbacks[correlation_id] = nil
 end
 
+---@param opts simple_pi.Opts?
 function M.setup(opts)
 	if setup_completed then
 		return
@@ -57,28 +99,36 @@ function M.setup(opts)
 	M.session_name = nil
 	M.socket_path = nil
 
-	M.set_handler("testcommand", function(data)
+	---@param data any
+	local on_testcommand = function(data)
 		utils.info("in testcommand")
 		utils.inspect(data)
 		return { ret = "value" }
-	end)
+	end
 
+	M.set_handler("testcommand", on_testcommand)
 	M.set_handler("nvim_get_qflist", commands.nvim_get_qflist)
 	M.set_handler("nvim_set_qflist", commands.nvim_set_qflist)
 
 	M.add_listener("pong", events.pong)
 
-	M.add_listener("command_success", function(data)
+	---@param data simple_pi.CommandSuccessData
+	local on_command_success = function(data)
 		local cb = callbacks[data.correlation_id]
 		clear_correlation(data.correlation_id)
-		call_cb(cb, "command_success", nil, data.value)
-	end)
+		invoke_cb(cb, "command_success", nil, data.value)
+	end
 
-	M.add_listener("command_failure", function(data)
+	M.add_listener("command_success", on_command_success)
+
+	---@param data simple_pi.CommandFailureData
+	local on_command_failure = function(data)
 		local cb = callbacks[data.correlation_id]
 		clear_correlation(data.correlation_id)
-		call_cb(cb, "command_failure", "Pi extension exception with error: " .. data.error)
-	end)
+		invoke_cb(cb, "command_failure", "Pi extension exception with error: " .. data.error)
+	end
+
+	M.add_listener("command_failure", on_command_failure)
 
 	setup_completed = true
 end
@@ -90,18 +140,26 @@ function M.start()
 		return
 	end
 
-	M.session_name = utils.make_session_name()
-	M.socket_path = utils.get_socket_dir() .. "/" .. M.session_name .. ".sock"
-	server.start(M.socket_path, M.on_connect, M.on_disconnect, M.on_message)
+	local session_name = utils.make_session_name()
+	M.session_name = session_name
 
-	config.opts.surface.open(M)
+	local socket_path = utils.get_socket_dir() .. "/" .. session_name .. ".sock"
+	M.socket_path = socket_path
 
-	if config.opts.focus_on_open then
-		config.opts.surface.focus()
+	server.start(socket_path, M.on_connect, M.on_disconnect, M.on_message)
+
+	local opts = config.get_opts()
+	opts.surface.open(M)
+
+	if opts.focus_on_open then
+		opts.surface.focus()
 	end
 end
 
+---@param name string
+---@return simple_pi.Surface
 function M.get_surface(name)
+	---@type table<string, boolean>
 	local default_surfaces = {
 		nvim = true,
 		tmux = true,
@@ -123,19 +181,26 @@ function M.get_surface(name)
 	return require("simple-pi.surfaces." .. name)
 end
 
+---@return boolean
 function M.ready()
 	return server.is_active()
 end
 
+---@param cb simple_pi.PiCallback?
+---@return boolean
 local function ready_guard(cb)
 	if not M.ready() then
-		call_cb(cb, "error", "Not connected to Pi, run require('simple-pi').start()")
+		invoke_cb(cb, "error", "Not connected to Pi, run require('simple-pi').start()")
 		return false
 	end
 
 	return true
 end
 
+---@param cb simple_pi.PiCallback?
+---@param type "command"|"event"
+---@param name string
+---@param data any
 function M.send(cb, type, name, data)
 	if not ready_guard(cb) then
 		return
@@ -162,7 +227,7 @@ function M.send(cb, type, name, data)
 			clear_correlation(correlation_id)
 
 			-- call callback
-			call_cb(cb, "timeout", "command '" .. name .. "' timed out")
+			invoke_cb(cb, "timeout", "command '" .. name .. "' timed out")
 		end)
 	end
 
@@ -171,15 +236,20 @@ function M.send(cb, type, name, data)
 	M.next_id = M.next_id + 1
 end
 
+---@param command_name string
+---@param func simple_pi.CommandHandler
 function M.set_handler(command_name, func)
 	handlers[command_name] = func
 end
 
+---@param event_name string
+---@param func simple_pi.EventListener
 function M.add_listener(event_name, func)
 	listeners[event_name] = listeners[event_name] or {}
 	table.insert(listeners[event_name], func)
 end
 
+---@param msg simple_pi.Message
 function M.on_message(msg)
 	if msg.type == "command" then
 		local handler = handlers[msg.name]
@@ -209,6 +279,7 @@ end
 function M.on_connect()
 	local enabled_tools = {}
 
+	---@type simple_pi.PiCallback
 	local cb = function(d)
 		if not d.ok then
 			utils.raise("Failed to init Pi configuration over socket")
@@ -222,8 +293,10 @@ function M.on_connect()
 		"nvim_set_qflist",
 	}
 
+	local tools = config.get_opts().tools
+
 	for _, tool_name in ipairs(all_tools) do
-		if not config.opts.tools.disable_all and config.opts.tools[tool_name].enabled then
+		if not tools.disable_all and tools[tool_name].enabled then
 			table.insert(enabled_tools, tool_name)
 		end
 	end
@@ -234,8 +307,10 @@ end
 function M.on_disconnect()
 	utils.info("Pi disconnected D:")
 
-	if config.opts.close_on_disconnect then
-		config.opts.surface.close()
+	local opts = config.get_opts()
+
+	if opts.close_on_disconnect then
+		opts.surface.close()
 	end
 end
 
@@ -243,23 +318,26 @@ function M.ping()
 	M.send(nil, "command", "ping", {})
 end
 
+---@param cb simple_pi.PiCallback?
 function M.focus(cb)
 	if not ready_guard(cb) then
 		return
 	end
 
-	config.opts.surface.focus()
-	call_cb(cb)
+	config.get_opts().surface.focus()
+	invoke_cb(cb)
 end
 
+---@return boolean
 function M.close()
 	if not ready_guard() then
 		return false
 	end
 
-	return config.opts.surface.close()
+	return config.get_opts().surface.close()
 end
 
+---@param cb simple_pi.PiCallback?
 function M.paste_line_reference(cb)
 	if not ready_guard(cb) then
 		return
@@ -272,7 +350,7 @@ function M.paste_line_reference(cb)
 	local buf_name = utils.get_buf_name(buf)
 
 	if buf_name == nil then
-		return call_cb(cb, "error", "Buffer is unnamed")
+		return invoke_cb(cb, "error", "Buffer is unnamed")
 	end
 
 	M.send(cb, "command", "append_text", {
@@ -281,7 +359,10 @@ function M.paste_line_reference(cb)
 	})
 end
 
---
+---@param retain_mode boolean?
+---@return integer buf
+---@return integer start_line
+---@return integer? end_line
 local function get_selection_span(retain_mode)
 	local mode = vim.fn.mode()
 	local buf = vim.api.nvim_get_current_buf()
@@ -309,6 +390,8 @@ local function get_selection_span(retain_mode)
 	return buf, start_line, end_line
 end
 
+---@param cb simple_pi.PiCallback?
+---@param opts { retain_mode: boolean? }?
 function M.paste_range_reference(cb, opts)
 	if not ready_guard(cb) then
 		return
@@ -318,7 +401,7 @@ function M.paste_range_reference(cb, opts)
 	local buf_name = utils.get_buf_name(buf)
 
 	if buf_name == nil then
-		return call_cb(cb, "error", "Buffer is unnamed")
+		return invoke_cb(cb, "error", "Buffer is unnamed")
 	end
 
 	M.send(cb, "command", "append_text", {
@@ -327,6 +410,7 @@ function M.paste_range_reference(cb, opts)
 	})
 end
 
+---@param cb simple_pi.PiCallback?
 function M.test(cb)
 	if not ready_guard(cb) then
 		return
@@ -335,6 +419,8 @@ function M.test(cb)
 	M.send(cb, "command", "test", {})
 end
 
+---@param cb simple_pi.PiCallback?
+---@param opts { retain_mode: boolean? }?
 function M.paste_selection(cb, opts)
 	if not ready_guard(cb) then
 		return
@@ -344,14 +430,18 @@ function M.paste_selection(cb, opts)
 	local buf_name = utils.get_buf_name(buf)
 
 	if buf_name == nil then
-		return call_cb(cb, "error", "Buffer is unnamed")
+		return invoke_cb(cb, "error", "Buffer is unnamed")
 	end
 
-	local lines = vim.api.nvim_buf_get_lines(buf, start_line - 1, end_line == nil and start_line or end_line, false)
+	if end_line == nil then
+		end_line = start_line
+	end
+
+	local lines = vim.api.nvim_buf_get_lines(buf, start_line - 1, end_line, false)
 
 	local with_header = {
 		string.format(end_line == nil and "%s:%d" or "%s:%d-%d", buf_name, start_line, end_line),
-		"```" .. vim.bo[buf].filetype,
+		"```" .. (vim.bo[buf].filetype or ""),
 	}
 
 	vim.list_extend(with_header, lines)
@@ -360,7 +450,9 @@ function M.paste_selection(cb, opts)
 	M.send(cb, "command", "append_text", { lines = with_header, as_paragraph = true })
 end
 
+---@param cb simple_pi.PiCallback?
 function M.paste_qflist(cb)
+	---@type string[]
 	local lines = { "Neovim quickfix list (qflist):" }
 	local qflines = commands.nvim_get_qflist(nil)
 	vim.list_extend(lines, qflines)
