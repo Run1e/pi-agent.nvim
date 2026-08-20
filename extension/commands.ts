@@ -3,7 +3,7 @@ import { registerTools } from "./tools";
 
 export type PiCommands = {
   init: { enabled_tools: string[] };
-  append_text: { text: string };
+  append_text: { lines: string[]; as_paragraph: boolean };
   ping: {};
   test: {};
 };
@@ -21,18 +21,28 @@ export const handleAppendText: CommandHandler<"append_text"> = (meta, data) => {
   // TODO: possible to insert where the users' cursor is?
   // there's "pasteToEditor" but that doesn't let us do spacing particularly well...
   const oldText = meta.ctx.ui.getEditorText();
+  const joined = data.lines.join("\n");
+
   let newText = "";
 
-  if (!oldText.length) {
-    newText = data.text;
-  } else if (oldText.endsWith(" ")) {
-    newText = oldText + data.text;
+  if (data.as_paragraph) {
+    if (!oldText.length) {
+      newText = joined;
+    } else {
+      newText = `${oldText}\n\n${joined}\n\n`;
+    }
   } else {
-    newText = oldText + " " + data.text;
-  }
+    if (!oldText.length) {
+      newText = joined;
+    } else if (oldText.endsWith(" ")) {
+      newText = oldText + joined;
+    } else {
+      newText = oldText + " " + joined;
+    }
 
-  if (!newText.endsWith(" ")) {
-    newText += " ";
+    if (!newText.endsWith(" ")) {
+      newText += " ";
+    }
   }
 
   meta.ctx.ui.setEditorText(newText);

@@ -277,14 +277,13 @@ function M.paste_line_reference(cb)
 		return call_cb(cb, "error", "Buffer is unnamed")
 	end
 
-	M.send(cb, "command", "append_text", { text = buf_name .. ":" .. line[1] })
+	M.send(cb, "command", "append_text", {
+		lines = { string.format("%s:%d", buf_name, line[1]) },
+		as_paragraph = false,
+	})
 end
 
-function M.paste_range_reference(cb, opts)
-	if not ready_guard(cb) then
-		return
-	end
-
+local function get_visual_selection(cb, retain_mode)
 	local mode = vim.fn.mode()
 	if (mode ~= "v") and (mode ~= "V") and (mode ~= "\22") then
 		return call_cb(cb, "error", "Not in visual mode")
@@ -297,20 +296,32 @@ function M.paste_range_reference(cb, opts)
 	local start_mark = vim.api.nvim_buf_get_mark(buf, "<")
 	local end_mark = vim.api.nvim_buf_get_mark(buf, ">")
 
-	if opts ~= nil and opts.retain_mode == true then
+	if retain_mode == true then
 		vim.cmd("normal! gv")
 	end
 
+	local start_line = start_mark[1]
+	local end_line = end_mark[1]
+
+	return buf, start_line, end_line
+end
+
+function M.paste_range_reference(cb, opts)
+	if not ready_guard(cb) then
+		return
+	end
+
+	local buf, start_line, end_line = get_visual_selection(cb, opts ~= nil and opts.retain_mode or nil)
 	local buf_name = utils.get_buf_name(buf)
 
 	if buf_name == nil then
 		return call_cb(cb, "error", "Buffer is unnamed")
 	end
 
-	local start_line = start_mark[1]
-	local end_line = end_mark[1]
-
-	M.send(cb, "command", "append_text", { text = buf_name .. ":" .. start_line .. "-" .. end_line })
+	M.send(cb, "command", "append_text", {
+		lines = { string.format("%s:%d-%d", buf_name, start_line, end_line) },
+		as_paragraph = false,
+	})
 end
 
 function M.test(cb)
@@ -319,6 +330,36 @@ function M.test(cb)
 	end
 
 	M.send(cb, "command", "test", {})
+end
+
+function M.paste_selection(cb)
+	if not ready_guard(cb) then
+		return
+	end
+
+	local mode = vim.fn.mode()
+	if (mode ~= "v") and (mode ~= "V") and (mode ~= "\22") then
+		return call_cb(cb, "error", "Not in visual mode")
+	end
+
+	local buf, start_line, end_line = get_visual_selection(cb, opts ~= nil and opts.retain_mode or nil)
+	local buf_name = utils.get_buf_name(buf)
+
+	if buf_name == nil then
+		return call_cb(cb, "error", "Buffer is unnamed")
+	end
+
+	local lines = vim.api.nvim_buf_get_lines(buf, start_line, end_line, false)
+
+	local with_header = {
+		string.format("%s:%d-%d", buf_name, start_line, end_line),
+		"```" .. vim.bo[buf].filetype,
+	}
+
+	vim.list_extend(with_header, lines)
+	table.insert(with_header, "```")
+
+	M.send(cb, "command", "append_text", { lines = with_header, as_paragraph = true })
 end
 
 return M

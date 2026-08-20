@@ -153,7 +153,7 @@ local function _focus_window()
 	local currently_open = open_in_tab(tab_id)
 
 	if not currently_open then
-		local config = {
+		local cfg = {
 			width = math.floor(vim.o.columns * M.opts.size_ratio), -- or fixed
 			height = vim.o.lines - 2,
 			split = M.opts.split,
@@ -167,7 +167,7 @@ local function _focus_window()
 		}
 
 		-- vim.api.nvim_win_set_buf(M.win_id, M.buf_id)
-		M.win_id = vim.api.nvim_open_win(M.buf_id, true, config)
+		M.win_id = vim.api.nvim_open_win(M.buf_id, true, cfg)
 	else
 		vim.api.nvim_set_current_win(M.win_id)
 	end
