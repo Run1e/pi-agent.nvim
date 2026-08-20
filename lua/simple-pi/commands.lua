@@ -52,8 +52,6 @@ function M.nvim_set_qflist(data)
 	}
 
 	local result = vim.fn.setqflist(items, action_map[data.action])
-	vim.notify(vim.inspect(result))
-
 	return result == 0
 end
 

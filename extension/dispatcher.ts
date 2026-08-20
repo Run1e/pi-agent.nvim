@@ -9,6 +9,7 @@ import { EventListener, PiEvent, PiEvents } from "./events";
 export type Meta = {
   pi: ExtensionAPI;
   ctx: ExtensionContext;
+  dispatcher: Dispatcher;
   invokeCommand: (name: string, data: any) => Promise<any>;
   sendEvent: (name: string, data: any) => void;
 };
@@ -133,6 +134,7 @@ export class Dispatcher {
     return {
       pi: this.pi,
       ctx: this.ctx,
+      dispatcher: this,
       invokeCommand: this.invokeCommand,
       sendEvent: this.sendEvent,
     };

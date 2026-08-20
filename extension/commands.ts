@@ -1,6 +1,8 @@
 import { Meta } from "./dispatcher";
+import { registerTools } from "./tools";
 
 export type PiCommands = {
+  init: { enabled_tools: string[] };
   append_text: { text: string };
   ping: {};
   test: {};
@@ -47,4 +49,18 @@ export const handleTest: CommandHandler<"test"> = async (meta, data) => {
   });
 
   meta.ctx.ui.notify(result.ret);
+};
+
+export const handleInit: CommandHandler<"init"> = (meta, data) => {
+  registerTools(meta.pi, meta.dispatcher, data.enabled_tools);
+
+  let initMsg = "Connected to Neovim :D";
+
+  if (data.enabled_tools.length) {
+    initMsg += ` Enabled tools: ${data.enabled_tools.join(", ")}`;
+  } else {
+    initMsg += " No tools enabled!";
+  }
+
+  meta.ctx.ui.notify(initMsg);
 };
