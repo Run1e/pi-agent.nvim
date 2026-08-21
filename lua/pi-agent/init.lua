@@ -153,16 +153,21 @@ function M.setup(opts)
 		local blocking_listener = M.pi_event_listeners_blocking[event.name]
 
 		for _, listener in ipairs(non_blocking_listeners) do
-			local ok, err = pcall(listener, event)
+			local ok, err = pcall(listener, event.event)
 			if not ok then
 				utils.error(string.format("non-blocking pi listener for '%s' failed with error: %s", event.name, err))
 			end
 		end
 
 		if blocking_listener ~= nil then
-			local ok, err = pcall(blocking_listener, event)
+			local ok, result = pcall(blocking_listener, event.event)
 			if not ok then
-				utils.error(string.format("blocking pi listener for '%s' failed with error: %s", event.name, err))
+				utils.error(
+					string.format("blocking pi listener for '%s' failed with error: %s", event.name, tostring(result))
+				)
+				M.send(nil, "event", "pi_event_response", { correlation_id = event.correlation_id, result = nil })
+			else
+				M.send(nil, "event", "pi_event_response", { correlation_id = event.correlation_id, result = result })
 			end
 		end
 	end)
@@ -319,7 +324,6 @@ end
 ---@param listener fun()
 ---@param blocking boolean?
 local function _on(event_name, listener, blocking)
-	local listener_list
 	if blocking == true then
 		-- can't add a blocking listener if there already is one
 		if utils.list_contains(M.pi_events_blocking, event_name) then

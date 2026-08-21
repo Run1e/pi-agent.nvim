@@ -7,6 +7,7 @@ export type NvimEvents = {
     event_name: string;
     blocking: boolean;
   };
+  pi_event_response: { correlation_id: number; result: any };
 };
 
 export type NvimEvent<K extends keyof NvimEvents = keyof NvimEvents> = {
@@ -32,11 +33,27 @@ export const listenRegisterEventInterest: EventListener<
   ) => void;
 
   castedOn(data.event_name, async (event) => {
-    meta.dispatcher.sendEvent("pi_event", {
-      name: data.event_name,
-      event: event,
-    });
-  });
+    let correlationId = meta.dispatcher.newCorrelationId();
 
-  meta._alreadyListenedTo.push(data.event_name);
+    const sender = () =>
+      meta.dispatcher.sendEvent("pi_event", {
+        name: data.event_name,
+        correlation_id: correlationId,
+        event: event,
+      });
+
+    if (data.blocking) {
+      const p = meta.dispatcher.waitForEvent(
+        "pi_event_response",
+        (event) => event.correlation_id === correlationId,
+      );
+
+      sender();
+      return (await p).result;
+    } else {
+      sender();
+    }
+
+    meta._alreadyListenedTo.push(data.event_name);
+  });
 };

@@ -78,7 +78,40 @@ export class Dispatcher {
     return nextId;
   }
 
-  sendCommand<K extends keyof NvimCommands>(
+  async waitForEvent<K extends keyof NvimEvents>(
+    name: K,
+    predicate: (event: NvimEvents[K]) => boolean,
+    timeout: number = 2500,
+  ): Promise<NvimEvents[K]> {
+    let timeoutId: NodeJS.Timeout;
+    let unsubscribe: () => void;
+
+    return new Promise((resolve, reject) => {
+      if (timeout != 0) {
+        timeoutId = setTimeout(() => {
+          reject(new Error(`timed out in waitForEvent '${name}'`));
+        }, timeout);
+      }
+
+      unsubscribe = this.addListener(name, (_, data: NvimEvents[K]) => {
+        if (predicate(data)) {
+          resolve(data);
+        }
+      });
+    }).finally(() => {
+      try {
+        unsubscribe();
+      } catch (e) {
+        //
+      }
+
+      if (timeoutId != null) {
+        clearTimeout(timeoutId);
+      }
+    }) as Promise<NvimEvents[K]>;
+  }
+
+  async sendCommand<K extends keyof NvimCommands>(
     name: K,
     data: NvimCommands[K],
   ): Promise<NvimCommandResults[K]> {
@@ -91,46 +124,32 @@ export class Dispatcher {
       data: data,
     });
 
-    let successUnsubscribe: () => void;
-    let failureUnsubscribe: () => void;
-    let timeoutId: NodeJS.Timeout;
-
-    return new Promise((resolve, reject) => {
-      timeoutId = setTimeout(() => {
-        reject(new Error(`command '${name}' timed out`));
-      }, 2500);
-
-      successUnsubscribe = this.addListener("command_success", (meta, data) => {
-        if (data.correlation_id !== newCorrelationId) return;
-        resolve(data.value as NvimCommandResults[K]);
-      });
-
-      failureUnsubscribe = this.addListener("command_failure", (meta, data) => {
-        if (data.correlation_id !== newCorrelationId) return;
-        reject(new Error(data.error));
-      });
-    }).finally(() => {
-      try {
-        successUnsubscribe();
-      } catch (e) {}
-      try {
-        failureUnsubscribe();
-      } catch (e) {}
-
-      if (timeoutId != null) {
-        clearTimeout(timeoutId);
-      }
-    }) as Promise<NvimCommandResults[K]>;
+    return Promise.race([
+      this.waitForEvent(
+        "command_success",
+        (data) => data.correlation_id === newCorrelationId,
+      ),
+      this.waitForEvent(
+        "command_failure",
+        (data) => data.correlation_id === newCorrelationId,
+      ).then((data) => {
+        throw new Error(data.error);
+      }),
+    ]).then((data) => data.value);
   }
 
-  sendEvent(name: string, data: any) {
+  sendEvent(name: string, data: any): number {
+    const correlationId = this.newCorrelationId();
+
     // events are fire-and-forget
     this.sendData({
       type: "event",
       name: name,
-      correlation_id: this.newCorrelationId(),
+      correlation_id: correlationId,
       data: data,
     });
+
+    return correlationId;
   }
 
   buildMeta(): Meta {
@@ -172,10 +191,11 @@ export class Dispatcher {
 
   handleEvent<K extends keyof NvimEvents>(event: NvimEvent<K>) {
     const listeners = this.listeners.get(event.name) ?? [];
+    const meta = this.buildMeta();
 
     for (const listener of listeners) {
       try {
-        listener(event.data);
+        listener(meta, event.data);
       } catch (e: any) {
         this.ctx.ui.notify(
           `Event listener for event '${event.name}' threw: ${e.message}`,
