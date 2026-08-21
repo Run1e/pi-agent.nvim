@@ -1,4 +1,4 @@
-import { ExtensionAPI, ToolInfo } from "@earendil-works/pi-coding-agent";
+import { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import Type from "typebox";
 import { Dispatcher } from "./dispatcher";
 

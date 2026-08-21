@@ -34,8 +34,8 @@ M.on_message = nil
 ---@param on_disconnect fun()
 ---@param on_message fun(msg: simple_pi.Message)
 function M.start(path, on_connect, on_disconnect, on_message)
-	if M.pipe ~= nil then
-		utils.raise("Server is already running, don't call .start again")
+	if M.client ~= nil or M.pipe ~= nil or M.pending_client ~= nil then
+		utils.error("Server already started, please stop first")
 	end
 
 	M.path = path
@@ -99,7 +99,10 @@ function M.close(inhibit_promote)
 	end
 
 	M.client:close(function()
-		vim.schedule(assert(M.on_disconnect))
+		if M.on_disconnect then
+			vim.schedule(M.on_disconnect)
+		end
+
 		if inhibit_promote ~= true then
 			M.maybe_promote_pending()
 		end
@@ -186,6 +189,7 @@ function M.on_accept()
 	M.maybe_promote_pending()
 end
 
+-- TODO: test this
 function M.stop()
 	if M.pending_client then
 		M.pending_client:close()

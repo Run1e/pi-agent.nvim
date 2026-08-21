@@ -13,7 +13,6 @@ import {
   handleTest,
 } from "./commands.ts";
 import { findSocket } from "./utils.ts";
-import { registerTools } from "./tools.ts";
 
 let client: Socket | null = null;
 let dispatcher: Dispatcher | null = null;

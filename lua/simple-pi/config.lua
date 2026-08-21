@@ -4,9 +4,9 @@ local M = {}
 
 ---@class simple_pi.Surface
 ---@field setup fun(opts: table?): simple_pi.Surface?
----@field open fun(pi: simple_pi): boolean?
----@field close fun(): boolean
----@field focus fun(): boolean
+---@field open fun(pi: simple_pi): nil
+---@field close fun(): nil
+---@field focus fun(): nil
 ---@field validate fun(): nil
 
 ---@class simple_pi.SetQflistToolOpts

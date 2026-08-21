@@ -21,14 +21,7 @@ function M.nvim_get_qflist(data)
 	local list = vim.fn.getqflist()
 	for _, entry in ipairs(list) do
 		local buf_name = utils.get_buf_name(entry.bufnr)
-		local text = string.format(
-			"%s|%d col %d|%s",
-			#buf_name and buf_name or "",
-			entry.lnum,
-			entry.col,
-			#entry.text and entry.text or "" -- should already be normalized to ""
-		)
-
+		local text = string.format("%s|%d col %d|%s", buf_name or "", entry.lnum, entry.col, entry.text or "")
 		table.insert(out, text)
 	end
 

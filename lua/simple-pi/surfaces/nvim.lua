@@ -76,7 +76,9 @@ end
 local function start_term()
 	local jobstart_opts = {
 		cwd = vim.uv.cwd(),
-		on_exit = M.close,
+		on_exit = function()
+			pcall(M.close)
+		end, -- close the tab/window on jobstart exit
 		pty = true,
 		term = true,
 	}
@@ -122,7 +124,6 @@ local function is_job_valid()
 end
 
 ---@param pi simple_pi
----@return boolean
 function M.open(pi)
 	local has_valid_job = is_job_valid()
 
@@ -147,21 +148,15 @@ function M.open(pi)
 	if not has_valid_job then
 		start_term()
 	end
-
-	return true
 end
 
----@return boolean
 function M.close()
 	if M.win_id ~= nil then
 		vim.api.nvim_win_close(M.win_id, true)
 		M.win_id = nil
 	end
-
-	return true
 end
 
----@param tab_id integer
 ---@return boolean
 local function open_in_tab(tab_id)
 	for _, win_id in ipairs(vim.api.nvim_tabpage_list_wins(tab_id)) do
@@ -174,10 +169,9 @@ local function open_in_tab(tab_id)
 	return false
 end
 
----@return boolean
 local function _focus_window()
 	if M.buf_id == nil then
-		return false
+		utils.raise("No buffer id")
 	end
 
 	local tab_id = vim.api.nvim_get_current_tabpage()
@@ -199,24 +193,21 @@ local function _focus_window()
 
 		-- vim.api.nvim_win_set_buf(M.win_id, M.buf_id)
 		M.win_id = vim.api.nvim_open_win(M.buf_id, true, cfg)
-		return true
 	else
 		-- we can't close a window that we don't have
 		-- we *could* figure out what window the buffer is in?
 		-- but we should be good I think
 		if M.win_id == nil then
-			return false
+			utils.raise("No window id")
 		end
 
 		vim.api.nvim_set_current_win(M.win_id)
-		return true
 	end
 end
 
----@return boolean
 local function _focus_tab()
 	if M.buf_id == nil then
-		return false
+		utils.raise("No buffer id")
 	end
 
 	if M.tab_id == nil then
@@ -231,19 +222,15 @@ local function _focus_tab()
 			vim.api.nvim_set_current_tabpage(M.tab_id)
 		end
 	end
-
-	return true
 end
 
----@return boolean
 function M.focus()
 	if M.opts.open_in == "window" then
-		return _focus_window()
+		_focus_window()
 	elseif M.opts.open_in == "tab" then
-		return _focus_tab()
+		_focus_tab()
 	else
-		utils.raise("?")
-		return false
+		utils.raise("What?")
 	end
 end
 

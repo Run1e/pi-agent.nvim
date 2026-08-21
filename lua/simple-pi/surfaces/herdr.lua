@@ -70,22 +70,18 @@ function M.setup(opts)
 	return M
 end
 
----Create a herdr tab and launch pi in its root pane.
 ---@param pi simple_pi
----@return boolean?
 function M.open(pi)
 	M.tab_id = nil
 	M.pane_id = nil
 
 	local data = herdr_run({ "tab", "create", "--cwd", vim.fn.getcwd() })
 	if data.error then
-		utils.info("Failed to create herdr tab: " .. data.error.message)
-		return false
+		utils.raise("Failed to create herdr tab: " .. data.error.message)
 	end
 
 	if not data.result or not data.result.root_pane then
-		utils.error("Failed to create Herdr tab")
-		return false
+		utils.raise("Failed to create Herdr tab")
 	end
 
 	M.tab_id = data.result.tab.tab_id
@@ -102,50 +98,37 @@ function M.open(pi)
 
 	data = herdr_run(cmd)
 	if data.error then
-		utils.error("Failed to launch Pi in herdr: " .. data.error.message)
-		return false
+		utils.raise("Failed to launch Pi in herdr: " .. data.error.message)
 	end
-
-	return true
 end
 
----Close the herdr tab.
----@return boolean
 function M.close()
 	-- this will kill the pi instance if it's still running there? do we even want that?
 	-- I mean it's kind of semantically what close would mean in this situation
 	if M.tab_id == nil then
-		return true
+		return
 	end
 
 	local data = herdr_run({ "tab", "close", M.tab_id })
 
 	if data.error then
-		utils.error("Failed to close herdr tab: " .. data.error.message)
-		return false
+		utils.raise("Failed to close herdr tab: " .. data.error.message)
 	end
 
 	M.tab_id = nil
 	M.pane_id = nil
-
-	return true
 end
 
----Focus the herdr tab.
----@return boolean
 function M.focus()
 	if M.tab_id == nil or M.pane_id == nil then
-		return false
+		utils.raise("No herdr tab or pane id")
 	end
 
 	local data = herdr_run({ "tab", "focus", M.tab_id })
 
 	if data.error then
-		utils.warn("herdr tab focus failed: " .. data.error.message)
-		return false
+		utils.raise("herdr tab focus failed: " .. data.error.message)
 	end
-
-	return true
 end
 
 -- check if herdr_bin actually exists

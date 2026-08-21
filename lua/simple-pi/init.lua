@@ -57,6 +57,7 @@ local function invoke_cb(cb, reason, err, value)
 	-- so we don't get randomly rekt further down the call stack
 	vim.schedule(function()
 		if err ~= nil then
+			err = tostring(err)
 			utils.error((reason or "") .. ": " .. err)
 			if cb ~= nil then
 				local ok, result = pcall(cb, { ok = false, reason = reason, error = err, value = nil })
@@ -266,14 +267,14 @@ function M.on_message(msg)
 					correlation_id = msg.correlation_id,
 					error = tostring(value),
 				})
-				utils.error("Command handler for '" .. msg.name .. "' failed: " .. value)
+				utils.error("Command handler for '" .. msg.name .. "' failed: " .. tostring(value))
 			end
 		end
 	elseif msg.type == "event" then
 		for _, listener in ipairs(listeners[msg.name] or {}) do
-			local ok, result = pcall(listener, msg.data)
+			local ok, value = pcall(listener, msg.data)
 			if not ok then
-				utils.error(string.format("Listener for event '%s' failed with error: %s", msg.name, result))
+				utils.error(string.format("Listener for event '%s' failed with error: %s", msg.name, tostring(value)))
 			end
 		end
 	end
@@ -313,7 +314,7 @@ function M.on_disconnect()
 	local opts = config.get_opts()
 
 	if opts.close_on_disconnect then
-		opts.surface.close()
+		pcall(opts.surface.close)
 	end
 end
 
@@ -327,17 +328,28 @@ function M.focus(cb)
 		return
 	end
 
-	config.get_opts().surface.focus()
-	invoke_cb(cb)
+	local ok, err = pcall(config.get_opts().surface.focus)
+
+	if ok then
+		invoke_cb(cb)
+	else
+		invoke_cb(cb, "error", err)
+	end
 end
 
----@return boolean
-function M.close()
+---@param cb simple_pi.PiCallback?
+function M.close(cb)
 	if not ready_guard() then
 		return false
 	end
 
-	return config.get_opts().surface.close()
+	local ok, err = pcall(config.get_opts().surface.close)
+
+	if ok then
+		invoke_cb(cb)
+	else
+		invoke_cb(cb, "error", err)
+	end
 end
 
 ---@param cb simple_pi.PiCallback?
@@ -399,7 +411,12 @@ function M.paste_range_reference(cb, opts)
 		return
 	end
 
-	local buf, start_line, end_line = get_selection_span(opts and opts.retain_mode)
+	local ok, buf, start_line, end_line = pcall(get_selection_span, opts and opts.retain_mode)
+	if not ok then
+		invoke_cb(cb, "error", tostring(buf))
+		return
+	end
+
 	local buf_name = utils.get_buf_name(buf)
 
 	if buf_name == nil then
@@ -428,7 +445,12 @@ function M.paste_selection(cb, opts)
 		return
 	end
 
-	local buf, start_line, end_line = get_selection_span(opts and opts.retain_mode)
+	local ok, buf, start_line, end_line = pcall(get_selection_span, opts and opts.retain_mode)
+	if not ok then
+		invoke_cb(cb, "error", tostring(buf))
+		return
+	end
+
 	local buf_name = utils.get_buf_name(buf)
 
 	if buf_name == nil then
