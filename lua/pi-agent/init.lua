@@ -68,7 +68,7 @@ M.pi_event_listeners_blocking = {}
 ---@param reason string?
 ---@param err string?
 ---@param value any?
-local function invoke_cb(cb, reason, err, value)
+function M.invoke_cb(cb, reason, err, value)
 	-- call_cb could be called from just about anywhere so we want to schedule on the event loop
 	-- so we don't get randomly rekt further down the call stack
 	vim.schedule(function()
@@ -93,7 +93,7 @@ local function invoke_cb(cb, reason, err, value)
 end
 
 ---@param correlation_id number
-local function clear_correlation(correlation_id)
+function M.clear_correlation(correlation_id)
 	local timer = M.timers[correlation_id]
 	if timer ~= nil then
 		timer:stop()
@@ -128,49 +128,9 @@ function M.setup(opts)
 	M.set_handler("nvim_set_qflist", commands.nvim_set_qflist)
 
 	M.add_listener("pong", events.pong)
-
-	---@param data pi_agent.CommandSuccessData
-	local on_command_success = function(data)
-		local cb = M.callbacks[data.correlation_id]
-		clear_correlation(data.correlation_id)
-		invoke_cb(cb, "command_success", nil, data.value)
-	end
-
-	M.add_listener("command_success", on_command_success)
-
-	---@param data pi_agent.CommandFailureData
-	local on_command_failure = function(data)
-		local cb = M.callbacks[data.correlation_id]
-		clear_correlation(data.correlation_id)
-		local error_str = (data.error and #data.error) and data.error or "no error"
-		invoke_cb(cb, "command_failure", "Pi extension exception with error: " .. error_str)
-	end
-
-	M.add_listener("command_failure", on_command_failure)
-
-	M.add_listener("pi_event", function(event)
-		local non_blocking_listeners = M.pi_event_listeners[event.name] or {}
-		local blocking_listener = M.pi_event_listeners_blocking[event.name]
-
-		for _, listener in ipairs(non_blocking_listeners) do
-			local ok, err = pcall(listener, event.event)
-			if not ok then
-				utils.error(string.format("non-blocking pi listener for '%s' failed with error: %s", event.name, err))
-			end
-		end
-
-		if blocking_listener ~= nil then
-			local ok, result = pcall(blocking_listener, event.event)
-			if not ok then
-				utils.error(
-					string.format("blocking pi listener for '%s' failed with error: %s", event.name, tostring(result))
-				)
-				M.send(nil, "event", "pi_event_response", { correlation_id = event.correlation_id, result = nil })
-			else
-				M.send(nil, "event", "pi_event_response", { correlation_id = event.correlation_id, result = result })
-			end
-		end
-	end)
+	M.add_listener("command_success", events.on_command_success)
+	M.add_listener("command_failure", events.on_command_failure)
+	M.add_listener("pi_event", events.pi_event)
 
 	M.setup_completed = true
 end
@@ -235,7 +195,7 @@ end
 ---@return boolean
 local function ready_guard(cb)
 	if not M.ready() then
-		invoke_cb(cb, "error", "Not connected to Pi, run require('pi-agent').start()")
+		M.invoke_cb(cb, "error", "Not connected to Pi, run require('pi-agent').start()")
 		return false
 	end
 
@@ -267,8 +227,8 @@ function M.send(cb, type, name, data)
 		M.timers[correlation_id] = timer
 
 		timer:start(2500, 0, function()
-			clear_correlation(correlation_id)
-			invoke_cb(cb, "timeout", "command '" .. name .. "' timed out")
+			M.clear_correlation(correlation_id)
+			M.invoke_cb(cb, "timeout", "command '" .. name .. "' timed out")
 		end)
 	end
 
@@ -312,7 +272,7 @@ function M.on_message(msg)
 		end
 	elseif msg.type == "event" then
 		for _, listener in ipairs(M.listeners[msg.name] or {}) do
-			local ok, value = pcall(listener, msg.data)
+			local ok, value = pcall(listener, M, msg.data)
 			if not ok then
 				utils.error(string.format("Listener for event '%s' failed with error: %s", msg.name, tostring(value)))
 			end
@@ -426,9 +386,9 @@ function M.focus(cb)
 	local ok, err = pcall(config.get_opts().surface.focus)
 
 	if ok then
-		invoke_cb(cb)
+		M.invoke_cb(cb)
 	else
-		invoke_cb(cb, "error", err)
+		M.invoke_cb(cb, "error", err)
 	end
 end
 
@@ -441,9 +401,9 @@ function M.close(cb)
 	local ok, err = pcall(config.get_opts().surface.close)
 
 	if ok then
-		invoke_cb(cb)
+		M.invoke_cb(cb)
 	else
-		invoke_cb(cb, "error", err)
+		M.invoke_cb(cb, "error", err)
 	end
 end
 
@@ -460,7 +420,7 @@ function M.paste_line_reference(cb)
 	local buf_name = utils.get_buf_name(buf)
 
 	if buf_name == nil then
-		return invoke_cb(cb, "error", "Buffer is unnamed")
+		return M.invoke_cb(cb, "error", "Buffer is unnamed")
 	end
 
 	M.send(cb, "command", "append_text", {
@@ -508,14 +468,14 @@ function M.paste_range_reference(cb, opts)
 
 	local ok, buf, start_line, end_line = pcall(get_selection_span, opts and opts.retain_mode)
 	if not ok then
-		invoke_cb(cb, "error", tostring(buf))
+		M.invoke_cb(cb, "error", tostring(buf))
 		return
 	end
 
 	local buf_name = utils.get_buf_name(buf)
 
 	if buf_name == nil then
-		return invoke_cb(cb, "error", "Buffer is unnamed")
+		return M.invoke_cb(cb, "error", "Buffer is unnamed")
 	end
 
 	M.send(cb, "command", "append_text", {
@@ -542,14 +502,14 @@ function M.paste_selection(cb, opts)
 
 	local ok, buf, start_line, end_line = pcall(get_selection_span, opts and opts.retain_mode)
 	if not ok then
-		invoke_cb(cb, "error", tostring(buf))
+		M.invoke_cb(cb, "error", tostring(buf))
 		return
 	end
 
 	local buf_name = utils.get_buf_name(buf)
 
 	if buf_name == nil then
-		return invoke_cb(cb, "error", "Buffer is unnamed")
+		return M.invoke_cb(cb, "error", "Buffer is unnamed")
 	end
 
 	if end_line == nil then
