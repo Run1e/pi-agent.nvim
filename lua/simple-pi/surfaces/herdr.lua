@@ -65,7 +65,7 @@ end
 
 ---@param opts table?
 ---@return simple_pi.Surface
-function M.setup(opts)
+function M.configure(opts)
 	M.opts = vim.tbl_deep_extend("force", vim.deepcopy(M.default_opts), opts or {})
 	return M
 end

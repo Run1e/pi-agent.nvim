@@ -25,19 +25,22 @@ local utils = require("simple-pi.utils")
 ---@class simple_pi
 local M = {}
 
-local setup_completed = false
+M.setup_completed = false
 
 ---@type table<string, simple_pi.CommandHandler>
-local handlers = {}
+M.handlers = {}
 
 ---@type table<string, simple_pi.EventListener[]>
-local listeners = {}
+M.listeners = {}
 
 ---@type table<number, any>
-local timers = {}
+M.timers = {}
 
 ---@type table<number, simple_pi.PiCallback>
-local callbacks = {}
+M.callbacks = {}
+
+---@type simple_pi.Server?
+M.server = nil
 
 ---@type string?
 M.session_name = nil
@@ -78,19 +81,19 @@ end
 
 ---@param correlation_id number
 local function clear_correlation(correlation_id)
-	local timer = timers[correlation_id]
+	local timer = M.timers[correlation_id]
 	if timer ~= nil and timer:is_active() then
 		timer:stop()
 		timer:close()
 	end
 
-	timers[correlation_id] = nil
-	callbacks[correlation_id] = nil
+	M.timers[correlation_id] = nil
+	M.callbacks[correlation_id] = nil
 end
 
 ---@param opts simple_pi.Opts?
 function M.setup(opts)
-	if setup_completed then
+	if M.setup_completed then
 		return
 	end
 
@@ -115,7 +118,7 @@ function M.setup(opts)
 
 	---@param data simple_pi.CommandSuccessData
 	local on_command_success = function(data)
-		local cb = callbacks[data.correlation_id]
+		local cb = M.callbacks[data.correlation_id]
 		clear_correlation(data.correlation_id)
 		invoke_cb(cb, "command_success", nil, data.value)
 	end
@@ -124,7 +127,7 @@ function M.setup(opts)
 
 	---@param data simple_pi.CommandFailureData
 	local on_command_failure = function(data)
-		local cb = callbacks[data.correlation_id]
+		local cb = M.callbacks[data.correlation_id]
 		clear_correlation(data.correlation_id)
 		local error_str = (data.error and #data.error) and data.error or "no error"
 		invoke_cb(cb, "command_failure", "Pi extension exception with error: " .. error_str)
@@ -132,7 +135,7 @@ function M.setup(opts)
 
 	M.add_listener("command_failure", on_command_failure)
 
-	setup_completed = true
+	M.setup_completed = true
 end
 
 function M.start()
@@ -148,7 +151,7 @@ function M.start()
 	local socket_path = utils.get_socket_dir() .. "/" .. session_name .. ".sock"
 	M.socket_path = socket_path
 
-	server.start(socket_path, M.on_connect, M.on_disconnect, M.on_message)
+	M.server = server.new(socket_path, M.on_connect, M.on_disconnect, M.on_message)
 
 	local opts = config.get_opts()
 	opts.surface.open(M)
@@ -159,7 +162,7 @@ function M.start()
 end
 
 function M.stop()
-	server.stop()
+	M.server:stop()
 
 	M.session_name = nil
 	M.socket_path = nil
@@ -187,7 +190,7 @@ end
 
 ---@return boolean
 function M.ready()
-	return server.is_active()
+	return M.server ~= nil and M.server:is_active()
 end
 
 ---@param cb simple_pi.PiCallback?
@@ -219,11 +222,11 @@ function M.send(cb, type, name, data)
 
 	-- for commands we want to check for acks/nacks returning
 	if type == "command" then
-		callbacks[M.next_id] = cb
+		M.callbacks[M.next_id] = cb
 
 		timer = vim.uv.new_timer()
 		assert(timer, "failed to create timer?")
-		timers[correlation_id] = timer
+		M.timers[correlation_id] = timer
 
 		timer:start(2500, 0, function()
 			-- if we're running we timed out
@@ -240,27 +243,27 @@ function M.send(cb, type, name, data)
 	end
 
 	-- would've loved a uuid for the id but eh this is fine?
-	server.send({ correlation_id = M.next_id, type = type, name = name, data = data })
+	M.server:send({ correlation_id = M.next_id, type = type, name = name, data = data })
 	M.next_id = M.next_id + 1
 end
 
 ---@param command_name string
 ---@param func simple_pi.CommandHandler
 function M.set_handler(command_name, func)
-	handlers[command_name] = func
+	M.handlers[command_name] = func
 end
 
 ---@param event_name string
 ---@param func simple_pi.EventListener
 function M.add_listener(event_name, func)
-	listeners[event_name] = listeners[event_name] or {}
-	table.insert(listeners[event_name], func)
+	M.listeners[event_name] = M.listeners[event_name] or {}
+	table.insert(M.listeners[event_name], func)
 end
 
 ---@param msg simple_pi.Message
 function M.on_message(msg)
 	if msg.type == "command" then
-		local handler = handlers[msg.name]
+		local handler = M.handlers[msg.name]
 
 		if handler then
 			local ok, value = pcall(handler, msg.data)
@@ -278,7 +281,7 @@ function M.on_message(msg)
 			end
 		end
 	elseif msg.type == "event" then
-		for _, listener in ipairs(listeners[msg.name] or {}) do
+		for _, listener in ipairs(M.listeners[msg.name] or {}) do
 			local ok, value = pcall(listener, msg.data)
 			if not ok then
 				utils.error(string.format("Listener for event '%s' failed with error: %s", msg.name, tostring(value)))
