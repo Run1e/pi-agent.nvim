@@ -93,7 +93,8 @@ function M.send(data)
 end
 
 ---@param inhibit_promote boolean?
-function M.close(inhibit_promote)
+---@param is_stopping boolean?
+function M.close(inhibit_promote, is_stopping)
 	if M.client == nil then
 		return
 	end
@@ -101,9 +102,12 @@ function M.close(inhibit_promote)
 	M.client:close(function()
 		if M.on_disconnect then
 			vim.schedule(M.on_disconnect)
+			if is_stopping == true then
+				M.on_disconnect = nil
+			end
 		end
 
-		if inhibit_promote ~= true then
+		if inhibit_promote ~= true or is_stopping == true then
 			M.maybe_promote_pending()
 		end
 	end)
@@ -152,7 +156,9 @@ function M.promote_client(client)
 		end
 	end)
 
-	vim.schedule(assert(M.on_connect))
+	if M.on_connect then
+		vim.schedule(M.on_connect)
+	end
 end
 
 function M.maybe_promote_pending()
@@ -211,6 +217,11 @@ function M.stop()
 		end)
 		M.pipe = nil
 	end
+
+	M.path = nil
+	-- M.on_connect = nil
+	-- M.on_disconnect = nil
+	-- M.on_message = nil
 end
 
 return M

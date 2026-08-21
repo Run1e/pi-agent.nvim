@@ -158,6 +158,13 @@ function M.start()
 	end
 end
 
+function M.stop()
+	server.stop()
+
+	M.session_name = nil
+	M.socket_path = nil
+end
+
 ---@param name string
 ---@return simple_pi.Surface
 function M.get_surface(name)

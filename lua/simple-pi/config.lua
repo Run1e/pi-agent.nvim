@@ -83,4 +83,8 @@ function M.setup(opts)
 	end
 end
 
+function M.clear()
+	M._opts = nil
+end
+
 return M
