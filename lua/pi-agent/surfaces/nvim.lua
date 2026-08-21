@@ -36,15 +36,7 @@ M.chan_id = nil
 ---@type integer?
 M.autocmd_id = nil
 
----@param opts table?
----@return pi_agent.Surface
-function M.configure(opts)
-	M.opts = vim.tbl_deep_extend("force", vim.deepcopy(M.default_opts), opts or {})
-
-	M.win_id = nil
-	M.buf_id = nil
-	M.chan_id = nil
-
+function M.setup()
 	if M.opts.auto_insert_on_focus and M.autocmd_id == nil then
 		M.autocmd_id = vim.api.nvim_create_autocmd("BufEnter", {
 			callback = function()
@@ -69,6 +61,16 @@ function M.configure(opts)
 		vim.api.nvim_del_autocmd(M.autocmd_id)
 		M.autocmd_id = nil
 	end
+
+	M.win_id = nil
+	M.buf_id = nil
+	M.chan_id = nil
+end
+
+---@param opts table?
+---@return pi_agent.Surface
+function M.configure(opts)
+	M.opts = vim.tbl_deep_extend("force", vim.deepcopy(M.default_opts), opts or {})
 
 	return M
 end

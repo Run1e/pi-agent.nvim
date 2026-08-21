@@ -56,6 +56,4 @@ function M.pi_event(pi, event)
 	end
 end
 
-function M.register_event_interest(pi, event) end
-
 return M

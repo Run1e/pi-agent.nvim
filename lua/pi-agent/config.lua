@@ -3,6 +3,7 @@ local utils = require("pi-agent.utils")
 local M = {}
 
 ---@class pi_agent.Surface
+---@field setup fun()
 ---@field configure fun(opts: table?): pi_agent.Surface
 ---@field open fun(pi: pi_agent.Pi): nil
 ---@field close fun(): nil

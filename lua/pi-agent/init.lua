@@ -112,6 +112,8 @@ function Pi.setup(opts)
 
 	config.setup(opts)
 
+	config.get_opts().surface.setup()
+
 	Pi.next_id = 1
 	Pi.session_name = nil
 	Pi.socket_path = nil
@@ -139,6 +141,10 @@ function Pi.start()
 
 	local socket_path = utils.get_socket_dir() .. "/" .. session_name .. ".sock"
 	Pi.socket_path = socket_path
+
+	if Pi.server ~= nil then
+		Pi.server:stop()
+	end
 
 	Pi.server = server.new(socket_path, Pi.on_connect, Pi.on_disconnect, Pi.on_message)
 
@@ -211,7 +217,8 @@ function Pi.send(cb, type, name, data)
 	local correlation_id = Pi.next_id
 
 	-- for commands we want to check for acks/nacks returning
-	if type == "command" then
+	if type == "command" and cb ~= nil then
+		-- noop if cb == nil
 		Pi.callbacks[Pi.next_id] = cb
 
 		timer = vim.uv.new_timer()
@@ -273,7 +280,7 @@ function Pi.on_message(msg)
 end
 
 ---@param event_name string
----@param listener fun()
+---@param listener pi_agent.PiEventListener
 ---@param blocking boolean?
 local function _on(event_name, listener, blocking)
 	if blocking == true then
@@ -313,13 +320,13 @@ local function _on(event_name, listener, blocking)
 end
 
 ---@param event_name string
----@param listener fun()
+---@param listener pi_agent.PiEventListener
 function Pi.on(event_name, listener)
 	_on(event_name, listener, false)
 end
 
 ---@param event_name string
----@param listener fun()
+---@param listener pi_agent.PiEventListener
 function Pi.on_blocking(event_name, listener)
 	_on(event_name, listener, true)
 end

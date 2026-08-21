@@ -65,6 +65,10 @@ local function herdr_run(args)
 	return data
 end
 
+function M.setup()
+	-- nothing to setup
+end
+
 ---@param opts pi_agent.surfaces.herdr.Opts?
 ---@return pi_agent.Surface
 function M.configure(opts)
