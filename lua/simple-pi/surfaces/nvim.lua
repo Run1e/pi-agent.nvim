@@ -3,13 +3,13 @@ local utils = require("simple-pi.utils")
 
 local M = {}
 
----@class simple_pi.NvimSurfaceOpts
+---@class simple_pi.nvim.Opts
 ---@field open_in "window"|"tab"
 ---@field auto_insert_on_focus boolean
 ---@field split ("right"|"left"|"top"|"bottom")
 ---@field size_ratio number
 
----@type simple_pi.NvimSurfaceOpts
+---@type simple_pi.nvim.Opts
 M.default_opts = {
 	-- "window" | "tab"
 	open_in = "window",
@@ -18,7 +18,7 @@ M.default_opts = {
 	size_ratio = 0.4,
 }
 
----@type simple_pi.NvimSurfaceOpts
+---@type simple_pi.nvim.Opts
 M.opts = vim.deepcopy(M.default_opts)
 
 ---@type integer?
