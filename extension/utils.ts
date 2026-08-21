@@ -6,7 +6,7 @@ export function findSocket(): string {
   );
 
   if (sessionIdIdx == -1) {
-    throw new Error("[simple-pi] Couldn't find session name");
+    throw new Error("[pi-agent] Couldn't find session name");
   }
 
   const sessionName = process.argv[sessionIdIdx + 1];
@@ -17,7 +17,7 @@ export function findSocket(): string {
   let currentCandidate: string;
 
   if (runtimeDir && runtimeDir.length) {
-    currentCandidate = runtimeDir + "/simple-pi/" + sessionName + ".sock";
+    currentCandidate = runtimeDir + "/pi-agent/" + sessionName + ".sock";
 
     if (existsSync(currentCandidate)) {
       return currentCandidate;
@@ -29,5 +29,5 @@ export function findSocket(): string {
     return currentCandidate;
   }
 
-  throw new Error("Could not find simple-pi session socket");
+  throw new Error("Could not find pi-agent session socket");
 }

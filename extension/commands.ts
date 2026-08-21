@@ -67,7 +67,7 @@ export const handleAppendText: CommandHandler<"append_text"> = (meta, data) => {
 
   // I don't really like this,
   // but it forces a repaint which doesn't happen with setEditorText for some reason.
-  meta.ctx.ui.notify("[simple-pi] text appended to prompt");
+  meta.ctx.ui.notify("[pi-agent] text appended to prompt");
 };
 
 export const handlePing: CommandHandler<"ping"> = (meta, data) => {

@@ -1,4 +1,4 @@
-# simple-pi.nvim
+# pi-agent.nvim
 
 Pragmatic integration between Neovim and the [Pi agent harness](https://pi.dev/).
 
@@ -8,7 +8,10 @@ Pragmatic integration between Neovim and the [Pi agent harness](https://pi.dev/)
 - Send context directly from Neovim; line/range references, buffer text around cursor, selected range, etc
 - Let your agent read and edit the quickfix list via tools
 - Listen to [Pi events](https://pi.dev/docs/latest/extensions#events) in Neovim through Lua
-- Trigger lua functions on Pi events: `pi.listen("pi:new_session", fn)`
+- Trigger lua functions on Pi events: `pi.listen("pi:new_session", function() ... end)`
+- Autoreload files on edit
+- Pi extension bundled with Neovim plugin, no extra dependencies
+- Built to be hackable and extendable
 
 ### PLANNED
 
@@ -31,11 +34,11 @@ Try asking:
 
 ### Surface
 
-simple-pi supports three "surfaces" out of the box: nvim, herdr, cmux, and tmux.
+pi-agent supports three "surfaces" out of the box: nvim, herdr, cmux, and tmux.
 
 To set a specific surface:
 ```lua
-local pi = require("simple-pi")
+local pi = require("pi-agent")
 pi.setup({
     surface = pi.get_surface("herdr")
 })
@@ -58,7 +61,7 @@ See surface documentation below for more information on configuring (or creating
 
 ### Keymaps
 
-simple-pi ships with no default keymaps.
+pi-agent ships with no default keymaps.
 
 
 
@@ -68,9 +71,9 @@ simple-pi ships with no default keymaps.
 
 ```lua
 return {
-	"Run1e/simple-pi.nvim",
+	"Run1e/pi-agent.nvim",
 	config = function()
-		require("simple-pi").setup()
+		require("pi-agent").setup()
         -- add your keymaps here...
 	end,
 }
@@ -79,7 +82,7 @@ return {
 ### Default options
 
 ```lua
-require("simple-pi").setup({
+require("pi-agent").setup({
 	surface = nil,
 	pi_bin = "pi",
 

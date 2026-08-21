@@ -1,22 +1,22 @@
-local config = require("simple-pi.config")
-local utils = require("simple-pi.utils")
+local config = require("pi-agent.config")
+local utils = require("pi-agent.utils")
 
 local M = {}
 
----@class simple_pi.herdr.Opts
+---@class pi_agent.surfaces.herdr.Opts
 ---@field herdr_bin string
 
 ---Result of a herdr CLI invocation.
----@class simple_pi.herdr.CommandResult
+---@class pi_agent.surfaces.herdr.CommandResult
 ---@field error { message: string }?
 ---@field result table?
 
----@type simple_pi.herdr.Opts
+---@type pi_agent.surfaces.herdr.Opts
 M.default_opts = {
 	herdr_bin = "herdr",
 }
 
----@type simple_pi.herdr.Opts
+---@type pi_agent.surfaces.herdr.Opts
 M.opts = vim.deepcopy(M.default_opts)
 
 ---@type string?
@@ -27,7 +27,7 @@ M.pane_id = nil
 
 ---Run a herdr CLI subcommand and decode its JSON output.
 ---@param args string[]
----@return simple_pi.herdr.CommandResult
+---@return pi_agent.surfaces.herdr.CommandResult
 local function herdr_run(args)
 	---@type string[]
 	local cmd = { M.opts.herdr_bin }
@@ -65,14 +65,14 @@ local function herdr_run(args)
 	return data
 end
 
----@param opts simple_pi.herdr.Opts?
----@return simple_pi.Surface
+---@param opts pi_agent.surfaces.herdr.Opts?
+---@return pi_agent.Surface
 function M.configure(opts)
 	M.opts = vim.tbl_deep_extend("force", vim.deepcopy(M.default_opts), opts or {})
 	return M
 end
 
----@param pi simple_pi
+---@param pi pi_agent
 function M.open(pi)
 	M.tab_id = nil
 	M.pane_id = nil

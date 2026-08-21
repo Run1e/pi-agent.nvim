@@ -44,15 +44,15 @@ function getContext(): ExtensionContext {
 
 function createClient() {
   client = createConnection({ path: findSocket() }, () =>
-    getContext().ui.notify("[simple-pi] Connected to Neovim :D"),
+    getContext().ui.notify("[pi-agent] Connected to Neovim :D"),
   );
 
   client.on("end", () => {
-    getContext().ui.notify("[simple-pi] Lost connection to Neovim D:", "error");
+    getContext().ui.notify("[pi-agent] Lost connection to Neovim D:", "error");
   });
 
   client.on("error", (err) => {
-    getContext().ui.notify("[simple-pi] " + err.message, "error");
+    getContext().ui.notify("[pi-agent] " + err.message, "error");
     getClient().destroy();
   });
 

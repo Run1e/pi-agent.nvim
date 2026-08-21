@@ -27,17 +27,17 @@ end
 ---@param level integer
 ---@param opts table?
 function M.notify(msg, level, opts)
-	pcall(vim.notify, "[simple-pi] " .. msg, level, opts)
+	pcall(vim.notify, "[pi-agent] " .. msg, level, opts)
 end
 
 ---@param msg string
 function M.raise(msg)
-	error("[simple-pi] " .. msg)
+	error("[pi-agent] " .. msg)
 end
 
 ---@return string
 function M.make_session_name()
-	return string.format("simple-pi-%s-%03d", os.date("%Y-%m-%dT%H-%M-%S"), vim.uv.now() % 1000)
+	return string.format("pi-agent-%s-%03d", os.date("%Y-%m-%dT%H-%M-%S"), vim.uv.now() % 1000)
 end
 
 ---@return string
@@ -49,7 +49,7 @@ function M.get_socket_dir()
 		return tmp_dir
 	end
 
-	ideal_dir = ideal_dir .. "/simple-pi"
+	ideal_dir = ideal_dir .. "/pi-agent"
 	vim.uv.fs_mkdir(ideal_dir, tonumber("700", 8))
 
 	-- fall back to base if we couldn't make it usable
@@ -78,7 +78,7 @@ function M.get_extension_path()
 	local info = assert(debug.getinfo(1, "S"))
 	local current_file = info.source:gsub("^@", "")
 	local dir = vim.fn.fnamemodify(current_file, ":p:h:h")
-	return dir .. "/../extension/simple-pi.ts"
+	return dir .. "/../extension/pi-agent.ts"
 end
 
 ---@param buf integer

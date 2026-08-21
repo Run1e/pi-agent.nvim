@@ -1,17 +1,17 @@
-local utils = require("simple-pi.utils")
+local utils = require("pi-agent.utils")
 
----@class simple_pi.Server
+---@class pi_agent.Server
 ---@field path string
 ---@field pipe uv.uv_pipe_t
 ---@field client uv.uv_pipe_t?
 ---@field pending_client uv.uv_pipe_t?
 ---@field on_connect fun()
 ---@field on_disconnect fun()
----@field on_message fun(msg: simple_pi.Message)
+---@field on_message fun(msg: pi_agent.Message)
 local Server = {}
 Server.__index = Server
 
----@class simple_pi.Message
+---@class pi_agent.Message
 ---@field correlation_id number
 ---@field type "command"|"event"
 ---@field name string
@@ -20,8 +20,8 @@ Server.__index = Server
 ---@param path string
 ---@param on_connect fun()
 ---@param on_disconnect fun()
----@param on_message fun(msg: simple_pi.Message)
----@return simple_pi.Server
+---@param on_message fun(msg: pi_agent.Message)
+---@return pi_agent.Server
 function Server.new(path, on_connect, on_disconnect, on_message)
 	os.remove(path)
 

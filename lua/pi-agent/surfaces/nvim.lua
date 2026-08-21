@@ -1,15 +1,15 @@
-local config = require("simple-pi.config")
-local utils = require("simple-pi.utils")
+local config = require("pi-agent.config")
+local utils = require("pi-agent.utils")
 
 local M = {}
 
----@class simple_pi.nvim.Opts
+---@class pi_agent.surfaces.nvim.Opts
 ---@field open_in "window"|"tab"
 ---@field auto_insert_on_focus boolean
 ---@field split ("right"|"left"|"top"|"bottom")
 ---@field size_ratio number
 
----@type simple_pi.nvim.Opts
+---@type pi_agent.surfaces.nvim.Opts
 M.default_opts = {
 	-- "window" | "tab"
 	open_in = "window",
@@ -18,7 +18,7 @@ M.default_opts = {
 	size_ratio = 0.4,
 }
 
----@type simple_pi.nvim.Opts
+---@type pi_agent.surfaces.nvim.Opts
 M.opts = vim.deepcopy(M.default_opts)
 
 ---@type integer?
@@ -37,7 +37,7 @@ M.chan_id = nil
 M.autocmd_id = nil
 
 ---@param opts table?
----@return simple_pi.Surface
+---@return pi_agent.Surface
 function M.configure(opts)
 	M.opts = vim.tbl_deep_extend("force", vim.deepcopy(M.default_opts), opts or {})
 
@@ -55,7 +55,7 @@ function M.configure(opts)
 					end
 
 					local buf_id = vim.api.nvim_get_current_buf()
-					if buf_id == M.buf_id and vim.bo[buf_id].filetype == "simple-pi" then
+					if buf_id == M.buf_id and vim.bo[buf_id].filetype == "pi-agent" then
 						if vim.fn.mode() ~= "i" then
 							vim.cmd("startinsert")
 						end
@@ -84,7 +84,7 @@ local function start_term()
 	}
 
 	local result = vim.fn.jobstart(
-		utils.make_pi_launch_command(config.get_opts().pi_bin, require("simple-pi").session_name),
+		utils.make_pi_launch_command(config.get_opts().pi_bin, require("pi-agent").session_name),
 		jobstart_opts
 	)
 
@@ -123,7 +123,7 @@ local function is_job_valid()
 	return true
 end
 
----@param pi simple_pi
+---@param pi pi_agent
 function M.open(pi)
 	local has_valid_job = is_job_valid()
 
@@ -138,7 +138,7 @@ function M.open(pi)
 		-- create a buffer if we don't have one
 		if M.buf_id == nil then
 			M.buf_id = vim.api.nvim_create_buf(false, true)
-			vim.bo[M.buf_id].filetype = "simple-pi"
+			vim.bo[M.buf_id].filetype = "pi-agent"
 		end
 	end
 

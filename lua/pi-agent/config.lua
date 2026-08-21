@@ -1,26 +1,26 @@
-local utils = require("simple-pi.utils")
+local utils = require("pi-agent.utils")
 
 local M = {}
 
----@class simple_pi.Surface
----@field configure fun(opts: table?): simple_pi.Surface
----@field open fun(pi: simple_pi): nil
+---@class pi_agent.Surface
+---@field configure fun(opts: table?): pi_agent.Surface
+---@field open fun(pi: pi_agent): nil
 ---@field close fun(): nil
 ---@field focus fun(): nil
 ---@field validate fun(): boolean
 
----@class simple_pi.ToolsOpts
+---@class pi_agent.config.ToolsOpts
 ---@field disable_all boolean
 ---@field nvim_get_qflist { enabled: boolean }
 ---@field nvim_set_qflist { enabled: boolean, on_update: fun()?}
 ---@field [string] any
 
----@class simple_pi.Opts
----@field surface simple_pi.Surface?
+---@class pi_agent.config.Opts
+---@field surface pi_agent.Surface?
 ---@field pi_bin string
 ---@field focus_on_open boolean
 ---@field close_on_disconnect boolean
----@field tools simple_pi.ToolsOpts
+---@field tools pi_agent.config.ToolsOpts
 
 M.valid_surfaces = {
 	nvim = true,
@@ -28,7 +28,7 @@ M.valid_surfaces = {
 	herdr = true,
 }
 
----@type simple_pi.Opts
+---@type pi_agent.config.Opts
 M.default_opts = {
 	surface = nil,
 	pi_bin = "pi",
@@ -50,22 +50,22 @@ M.default_opts = {
 	},
 }
 
----@type simple_pi.Opts?
+---@type pi_agent.config.Opts?
 M._opts = nil
 
----@return simple_pi.Opts
+---@return pi_agent.config.Opts
 function M.get_opts()
 	local opts = M._opts
-	assert(opts, "[simple-pi] Call setup() before using the plugin")
-	assert(opts.surface, "[simple-pi] No surface set")
+	assert(opts, "[pi-agent] Call setup() before using the plugin")
+	assert(opts.surface, "[pi-agent] No surface set")
 	return opts
 end
 
----@param opts simple_pi.Opts?
+---@param opts pi_agent.config.Opts?
 function M.setup(opts)
 	M._opts = vim.tbl_deep_extend("force", vim.deepcopy(M.default_opts), opts or {})
 
-	local default_surface = require("simple-pi.surfaces.nvim")
+	local default_surface = require("pi-agent.surfaces.nvim")
 
 	-- default to nvim surface
 	if M.get_opts().surface == nil then

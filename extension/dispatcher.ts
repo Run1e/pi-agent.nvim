@@ -11,7 +11,7 @@ import {
   PiCommands,
 } from "./commands";
 import { EventListener, PiEvent, PiEvents } from "./events";
-import { SendDataFn } from "./simple-pi";
+import { SendDataFn } from "./pi-agent";
 
 export type Meta = {
   pi: ExtensionAPI;

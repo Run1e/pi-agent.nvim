@@ -1,45 +1,45 @@
-local commands = require("simple-pi.commands")
-local config = require("simple-pi.config")
-local events = require("simple-pi.events")
-local server = require("simple-pi.server")
-local utils = require("simple-pi.utils")
+local commands = require("pi-agent.commands")
+local config = require("pi-agent.config")
+local events = require("pi-agent.events")
+local server = require("pi-agent.server")
+local utils = require("pi-agent.utils")
 
----@class simple_pi.CallbackResult
+---@class pi_agent.CallbackResult
 ---@field ok boolean
 ---@field reason ("command_success"|"command_failure"|"timeout"|"error")?
 ---@field error string?
 ---@field value any?
 
----@alias simple_pi.Callback fun(result: simple_pi.CallbackResult)
----@alias simple_pi.CommandHandler fun(data: any): any?
----@alias simple_pi.EventListener fun(data: any)
+---@alias pi_agent.Callback fun(result: pi_agent.CallbackResult)
+---@alias pi_agent.CommandHandler fun(data: any): any?
+---@alias pi_agent.EventListener fun(data: any)
 
----@class simple_pi.CommandSuccessData
+---@class pi_agent.CommandSuccessData
 ---@field correlation_id number
 ---@field value any
 
----@class simple_pi.CommandFailureData
+---@class pi_agent.CommandFailureData
 ---@field correlation_id number
 ---@field error string
 
----@class simple_pi
+---@class pi_agent
 local M = {}
 
 M.setup_completed = false
 
----@type table<string, simple_pi.CommandHandler>
+---@type table<string, pi_agent.CommandHandler>
 M.handlers = {}
 
----@type table<string, simple_pi.EventListener[]>
+---@type table<string, pi_agent.EventListener[]>
 M.listeners = {}
 
 ---@type table<number, uv.uv_timer_t>
 M.timers = {}
 
----@type table<number, simple_pi.Callback>
+---@type table<number, pi_agent.Callback>
 M.callbacks = {}
 
----@type simple_pi.Server?
+---@type pi_agent.Server?
 M.server = nil
 
 ---@type string?
@@ -51,7 +51,7 @@ M.socket_path = nil
 ---@type integer
 M.next_id = 1
 
----@param cb simple_pi.Callback?
+---@param cb pi_agent.Callback?
 ---@param reason string?
 ---@param err string?
 ---@param value any?
@@ -91,7 +91,7 @@ local function clear_correlation(correlation_id)
 	M.callbacks[correlation_id] = nil
 end
 
----@param opts simple_pi.Opts?
+---@param opts pi_agent.config.Opts?
 function M.setup(opts)
 	if M.setup_completed then
 		return
@@ -116,7 +116,7 @@ function M.setup(opts)
 
 	M.add_listener("pong", events.pong)
 
-	---@param data simple_pi.CommandSuccessData
+	---@param data pi_agent.CommandSuccessData
 	local on_command_success = function(data)
 		local cb = M.callbacks[data.correlation_id]
 		clear_correlation(data.correlation_id)
@@ -125,7 +125,7 @@ function M.setup(opts)
 
 	M.add_listener("command_success", on_command_success)
 
-	---@param data simple_pi.CommandFailureData
+	---@param data pi_agent.CommandFailureData
 	local on_command_failure = function(data)
 		local cb = M.callbacks[data.correlation_id]
 		clear_correlation(data.correlation_id)
@@ -172,7 +172,7 @@ function M.stop()
 end
 
 ---@param name string
----@return simple_pi.Surface
+---@return pi_agent.Surface
 function M.get_surface(name)
 	if not config.valid_surfaces[name] then
 		utils.error(
@@ -186,7 +186,7 @@ function M.get_surface(name)
 		name = "nvim"
 	end
 
-	return require("simple-pi.surfaces." .. name)
+	return require("pi-agent.surfaces." .. name)
 end
 
 ---@return boolean
@@ -194,18 +194,18 @@ function M.ready()
 	return M.server ~= nil and M.server:is_active()
 end
 
----@param cb simple_pi.Callback?
+---@param cb pi_agent.Callback?
 ---@return boolean
 local function ready_guard(cb)
 	if not M.ready() then
-		invoke_cb(cb, "error", "Not connected to Pi, run require('simple-pi').start()")
+		invoke_cb(cb, "error", "Not connected to Pi, run require('pi-agent').start()")
 		return false
 	end
 
 	return true
 end
 
----@param cb simple_pi.Callback?
+---@param cb pi_agent.Callback?
 ---@param type "command"|"event"
 ---@param name string
 ---@param data any
@@ -249,19 +249,19 @@ function M.send(cb, type, name, data)
 end
 
 ---@param command_name string
----@param func simple_pi.CommandHandler
+---@param func pi_agent.CommandHandler
 function M.set_handler(command_name, func)
 	M.handlers[command_name] = func
 end
 
 ---@param event_name string
----@param func simple_pi.EventListener
+---@param func pi_agent.EventListener
 function M.add_listener(event_name, func)
 	M.listeners[event_name] = M.listeners[event_name] or {}
 	table.insert(M.listeners[event_name], func)
 end
 
----@param msg simple_pi.Message
+---@param msg pi_agent.Message
 function M.on_message(msg)
 	if msg.type == "command" then
 		local handler = M.handlers[msg.name]
@@ -294,7 +294,7 @@ end
 function M.on_connect()
 	local enabled_tools = {}
 
-	---@type simple_pi.Callback
+	---@type pi_agent.Callback
 	local cb = function(d)
 		if not d.ok then
 			utils.raise("Failed to init Pi configuration over socket")
@@ -333,7 +333,7 @@ function M.ping(cb)
 	M.send(cb, "command", "ping", {})
 end
 
----@param cb simple_pi.Callback?
+---@param cb pi_agent.Callback?
 function M.focus(cb)
 	if not ready_guard(cb) then
 		return
@@ -348,7 +348,7 @@ function M.focus(cb)
 	end
 end
 
----@param cb simple_pi.Callback?
+---@param cb pi_agent.Callback?
 function M.close(cb)
 	if not ready_guard(cb) then
 		return
@@ -363,7 +363,7 @@ function M.close(cb)
 	end
 end
 
----@param cb simple_pi.Callback?
+---@param cb pi_agent.Callback?
 function M.paste_line_reference(cb)
 	if not ready_guard(cb) then
 		return
@@ -415,7 +415,7 @@ local function get_selection_span(retain_mode)
 	return buf, start_line, end_line
 end
 
----@param cb simple_pi.Callback?
+---@param cb pi_agent.Callback?
 ---@param opts { retain_mode: boolean? }?
 function M.paste_range_reference(cb, opts)
 	if not ready_guard(cb) then
@@ -440,7 +440,7 @@ function M.paste_range_reference(cb, opts)
 	})
 end
 
----@param cb simple_pi.Callback?
+---@param cb pi_agent.Callback?
 function M.test(cb)
 	if not ready_guard(cb) then
 		return
@@ -449,7 +449,7 @@ function M.test(cb)
 	M.send(cb, "command", "test", {})
 end
 
----@param cb simple_pi.Callback?
+---@param cb pi_agent.Callback?
 ---@param opts { retain_mode: boolean? }?
 function M.paste_selection(cb, opts)
 	if not ready_guard(cb) then
@@ -485,7 +485,7 @@ function M.paste_selection(cb, opts)
 	M.send(cb, "command", "append_text", { lines = with_header, as_paragraph = true })
 end
 
----@param cb simple_pi.Callback?
+---@param cb pi_agent.Callback?
 function M.paste_qflist(cb)
 	---@type string[]
 	local lines = { "Neovim quickfix list (qflist):" }

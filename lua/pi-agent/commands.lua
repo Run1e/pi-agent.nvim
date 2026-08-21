@@ -1,16 +1,16 @@
-local config = require("simple-pi.config")
-local utils = require("simple-pi.utils")
+local config = require("pi-agent.config")
+local utils = require("pi-agent.utils")
 
 local M = {}
 
----@class simple_pi.nvim_set_qflist_entry_data
+---@class pi_agent.commands.nvim_set_qflist_entry_data
 ---@field file string
 ---@field lnum integer
 ---@field col integer
 ---@field special_comment string?
 
----@class simple_pi.nvim_set_qflist_data
----@field entries simple_pi.nvim_set_qflist_entry_data[]
+---@class pi_agent.commands.nvim_set_qflist_data
+---@field entries pi_agent.commands.nvim_set_qflist_entry_data[]
 ---@field action "replace"|"append"
 
 ---@param _ nil
@@ -28,7 +28,7 @@ function M.nvim_get_qflist(_)
 	return out
 end
 
----@param data simple_pi.nvim_set_qflist_data
+---@param data pi_agent.commands.nvim_set_qflist_data
 ---@return integer
 function M.nvim_set_qflist(data)
 	---@type table[]
