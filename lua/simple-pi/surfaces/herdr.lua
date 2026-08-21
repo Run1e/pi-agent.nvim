@@ -1,20 +1,22 @@
 local config = require("simple-pi.config")
 local utils = require("simple-pi.utils")
 
----Surface that drives an external herdr tab/pane via its CLI.
----(implements simple_pi.Surface, declared in simple-pi/config.lua)
 local M = {}
+
+---@class simple_pi.HerdrSurfaceOpts
+---@field herdr_bin string
 
 ---Result of a herdr CLI invocation.
 ---@class simple_pi.HerdrResult
 ---@field error { message: string }?
 ---@field result table?
 
----@type { herdr_bin: string }
+---@type simple_pi.HerdrSurfaceOpts
 M.default_opts = {
 	herdr_bin = "herdr",
 }
 
+---@type simple_pi.HerdrSurfaceOpts
 M.opts = vim.deepcopy(M.default_opts)
 
 ---@type string?
@@ -63,7 +65,7 @@ local function herdr_run(args)
 	return data
 end
 
----@param opts table?
+---@param opts simple_pi.HerdrSurfaceOpts?
 ---@return simple_pi.Surface
 function M.configure(opts)
 	M.opts = vim.tbl_deep_extend("force", vim.deepcopy(M.default_opts), opts or {})

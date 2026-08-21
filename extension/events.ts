@@ -4,7 +4,7 @@ export type PiEvents = {
 };
 
 export type PiEvent<K extends keyof PiEvents = keyof PiEvents> = {
-  [K2 in K]: { correlation_id: number; name: K2; data: PiEvents[K2] };
+  [Key in K]: { correlation_id: number; name: Key; data: PiEvents[Key] };
 }[K];
 
 export type EventListener<K extends keyof PiEvents> = (

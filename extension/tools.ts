@@ -18,13 +18,7 @@ export function registerTools(
       parameters: Type.Object({}),
 
       async execute(_toolCallId, params, signal, onUpdate, ctx) {
-        let res: string[] = [];
-
-        res = (await dispatcher.invokeCommand(
-          "nvim_get_qflist",
-          {},
-        )) as string[];
-
+        const res = await dispatcher.sendCommand("nvim_get_qflist", null);
         const output = res.length ? res.join("\n") : "Quickfix list is empty";
 
         return {
@@ -80,10 +74,10 @@ export function registerTools(
       }),
 
       async execute(toolCallId, params, signal, onUpdate, ctx) {
-        const entryCount: number = (await dispatcher.invokeCommand(
+        const entryCount: number = await dispatcher.sendCommand(
           "nvim_set_qflist",
           params,
-        )) as number;
+        );
 
         return {
           content: [

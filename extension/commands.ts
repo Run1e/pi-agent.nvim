@@ -9,13 +9,30 @@ export type PiCommands = {
 };
 
 export type PiCommand<K extends keyof PiCommands = keyof PiCommands> = {
-  [K2 in K]: { correlation_id: number; name: K2; data: PiCommands[K2] };
+  [Key in K]: { correlation_id: number; name: Key; data: PiCommands[Key] };
 }[K];
 
 export type CommandHandler<K extends keyof PiCommands> = (
   meta: Meta,
   data: PiCommands[K],
-) => any | Promise<any>;
+) => any;
+
+export type NvimCommands = {
+  nvim_get_qflist: null;
+  nvim_set_qflist: {
+    entries: {
+      file: string;
+      lnum: number;
+      col: number;
+      special_command?: string;
+    }[];
+  };
+};
+
+export type NvimCommandResults = {
+  nvim_get_qflist: string[];
+  nvim_set_qflist: number;
+};
 
 export const handleAppendText: CommandHandler<"append_text"> = (meta, data) => {
   // TODO: possible to insert where the users' cursor is?

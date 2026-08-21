@@ -3,8 +3,15 @@ import {
   ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
 
-import { CommandHandler, PiCommand, PiCommands } from "./commands";
+import {
+  CommandHandler,
+  NvimCommandResults,
+  NvimCommands,
+  PiCommand,
+  PiCommands,
+} from "./commands";
 import { EventListener, PiEvent, PiEvents } from "./events";
+import { SendDataFn } from "./simple-pi";
 
 export type Meta = {
   pi: ExtensionAPI;
@@ -27,14 +34,10 @@ export class Dispatcher {
 
   private pi: ExtensionAPI;
   private ctx: ExtensionContext;
-  private sendData: (data: object) => void;
+  private sendData: SendDataFn;
   private nextId = 100;
 
-  constructor(
-    pi: ExtensionAPI,
-    ctx: ExtensionContext,
-    sendData: (data: object) => void,
-  ) {
+  constructor(pi: ExtensionAPI, ctx: ExtensionContext, sendData: SendDataFn) {
     this.pi = pi;
     this.ctx = ctx;
     this.sendData = sendData;
@@ -78,7 +81,10 @@ export class Dispatcher {
     return nextId;
   }
 
-  invokeCommand(name: string, data: any) {
+  sendCommand<K extends keyof NvimCommands>(
+    name: K,
+    data: NvimCommands[K],
+  ): Promise<NvimCommandResults[K]> {
     const newCorrelationId = this.newCorrelationId();
 
     this.sendData({
@@ -99,7 +105,7 @@ export class Dispatcher {
 
       successUnsubscribe = this.addListener("command_success", (data) => {
         if (data.correlation_id !== newCorrelationId) return;
-        resolve(data.value);
+        resolve(data.value as NvimCommandResults[K]);
       });
 
       failureUnsubscribe = this.addListener("command_failure", (data) => {
@@ -117,7 +123,7 @@ export class Dispatcher {
       if (timeoutId != null) {
         clearTimeout(timeoutId);
       }
-    });
+    }) as Promise<NvimCommandResults[K]>;
   }
 
   sendEvent(name: string, data: any) {
@@ -135,7 +141,7 @@ export class Dispatcher {
       pi: this.pi,
       ctx: this.ctx,
       dispatcher: this,
-      invokeCommand: this.invokeCommand,
+      invokeCommand: this.sendCommand,
       sendEvent: this.sendEvent,
     };
   }

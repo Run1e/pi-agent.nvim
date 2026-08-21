@@ -6,7 +6,7 @@ local utils = require("simple-pi.utils")
 
 ---@class simple_pi.CallbackResult
 ---@field ok boolean
----@field reason string? like "command_success", "command_failure", "timeout", "error"
+---@field reason ("command_success"|"command_failure"|"timeout"|"error")?
 ---@field error string?
 ---@field value any?
 
@@ -174,8 +174,6 @@ end
 ---@param name string
 ---@return simple_pi.Surface
 function M.get_surface(name)
-	---@type table<string, boolean>
-
 	if not config.valid_surfaces[name] then
 		utils.error(
 			string.format(

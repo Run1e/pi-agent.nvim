@@ -7,7 +7,7 @@ local M = {}
 ---@field open fun(pi: simple_pi): nil
 ---@field close fun(): nil
 ---@field focus fun(): nil
----@field validate fun(): nil
+---@field validate fun(): boolean
 
 ---@class simple_pi.SetQflistToolOpts
 ---@field enabled boolean
@@ -20,7 +20,7 @@ local M = {}
 ---@field [string] any
 
 ---@class simple_pi.Opts
----@field surface simple_pi.Surface
+---@field surface simple_pi.Surface?
 ---@field pi_bin string
 ---@field focus_on_open boolean
 ---@field close_on_disconnect boolean
@@ -60,7 +60,8 @@ M._opts = nil
 ---@return simple_pi.Opts
 function M.get_opts()
 	local opts = M._opts
-	assert(opts, "simple-pi: call setup() before using the plugin")
+	assert(opts, "[simple-pi] Call setup() before using the plugin")
+	assert(opts.surface, "[simple-pi] No surface set")
 	return opts
 end
 

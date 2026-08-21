@@ -3,14 +3,14 @@ local utils = require("simple-pi.utils")
 
 local M = {}
 
----@class simple_pi.QflistEntry
+---@class simple_pi.nvim_set_qflist_entry_data
 ---@field file string
 ---@field lnum integer
 ---@field col integer
 ---@field special_comment string?
 
----@class simple_pi.QflistRequest
----@field entries simple_pi.QflistEntry[]
+---@class simple_pi.nvim_set_qflist_data
+---@field entries simple_pi.nvim_set_qflist_entry_data[]
 ---@field action "replace"|"append"
 
 ---@param data nil
@@ -28,7 +28,7 @@ function M.nvim_get_qflist(data)
 	return out
 end
 
----@param data simple_pi.QflistRequest
+---@param data simple_pi.nvim_set_qflist_data
 ---@return integer
 function M.nvim_set_qflist(data)
 	---@type table[]

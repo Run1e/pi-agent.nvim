@@ -1,5 +1,13 @@
 local utils = require("simple-pi.utils")
 
+---@class simple_pi.Server
+---@field path string
+---@field pipe uv.uv_pipe_t
+---@field client uv.uv_pipe_t?
+---@field pending_client uv.uv_pipe_t?
+---@field on_connect fun()
+---@field on_disconnect fun()
+---@field on_message fun(msg: simple_pi.Message)
 local Server = {}
 Server.__index = Server
 
@@ -9,27 +17,11 @@ Server.__index = Server
 ---@field name string
 ---@field data any
 
----@class simple_pi.Server
----@field path string
----@field pipe uv.uv_pipe_t
----@field client uv.uv_pipe_t?
----@field pending_client uv.uv_pipe_t?
----@field on_connect fun()?
----@field on_disconnect fun()?
----@field on_message fun(msg: simple_pi.Message)
----@field send fun(self: simple_pi.Server, data: table) nil
----@field close fun(self: simple_pi.Server, inhibit_promote: boolean?, is_stopping: boolean?) nil
----@field promote_client fun(self: simple_pi.Server, client: uv.uv_pipe_t) nil
----@field maybe_promote_pending fun(self: simple_pi.Server) nil
----@field on_accept fun(self: simple_pi.Server) nil
----@field stop fun(self: simple_pi.Server) nil
----@field is_active fun(self: simple_pi.Server) boolean
-
 ---@param path string
 ---@param on_connect fun()
 ---@param on_disconnect fun()
 ---@param on_message fun(msg: simple_pi.Message)
----@returns simple_pi.Server
+---@return simple_pi.Server
 function Server.new(path, on_connect, on_disconnect, on_message)
 	os.remove(path)
 

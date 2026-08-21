@@ -6,7 +6,7 @@ local M = {}
 ---@class simple_pi.NvimSurfaceOpts
 ---@field open_in "window"|"tab"
 ---@field auto_insert_on_focus boolean
----@field split string
+---@field split ("right"|"left"|"top"|"bottom")
 ---@field size_ratio number
 
 ---@type simple_pi.NvimSurfaceOpts
