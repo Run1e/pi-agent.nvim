@@ -1,11 +1,12 @@
 export type NvimCommands = {
   nvim_get_qflist: null;
   nvim_set_qflist: {
+    action: string;
     entries: {
       file: string;
       lnum: number;
       col: number;
-      special_command?: string;
+      special_comment?: string;
     }[];
   };
   test_command: { hello: string };
