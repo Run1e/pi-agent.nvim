@@ -13,7 +13,7 @@ export const listenRegisterEventInterest: EventListener<
   const ed = meta.dispatcher.eventData;
 
   // register listener if not already
-  if (!ed.registeredListeners.includes(data.event_name)) {
+  if (!ed.registeredListeners.has(data.event_name)) {
     const castedOn = meta.pi.on as (
       event: string,
       handler: (event: any) => unknown,
@@ -50,7 +50,7 @@ export const listenRegisterEventInterest: EventListener<
     });
   }
 
-  meta.dispatcher.eventData.registeredListeners.push(data.event_name);
+  meta.dispatcher.eventData.registeredListeners.add(data.event_name);
   meta.dispatcher.eventData.blockingListeners.set(
     data.event_name,
     data.blocking || !!ed.blockingListeners.get(data.event_name),

@@ -14,7 +14,7 @@ import {
 } from "./extern";
 
 export type EventData = {
-  registeredListeners: string[];
+  registeredListeners: Set<string>;
   blockingListeners: Map<string, boolean>;
 };
 
@@ -41,7 +41,7 @@ export class Dispatcher {
   private nextId = 100;
 
   public eventData: EventData = {
-    registeredListeners: [],
+    registeredListeners: new Set(),
     blockingListeners: new Map(),
   };
 
