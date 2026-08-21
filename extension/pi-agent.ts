@@ -24,8 +24,18 @@ export type Message = {
   data: any;
 };
 
+export type PersistentData = {
+  registeredListeners: string[];
+  blockingListeners: Map<string, boolean>;
+};
+
 let client: Socket | null = null;
 let dispatcher: Dispatcher | null = null;
+
+let persistentData: PersistentData = {
+  registeredListeners: [],
+  blockingListeners: new Map(),
+};
 
 function getClient(): Socket {
   if (!client || client.destroyed) {
@@ -97,7 +107,7 @@ export default function (pi: ExtensionAPI) {
         client.write(JSON.stringify(data) + "\n");
       };
 
-      dispatcher = new Dispatcher(pi, ctx, sendData);
+      dispatcher = new Dispatcher(pi, ctx, sendData, persistentData);
 
       // register command handlers
       dispatcher.setHandler("append_text", handleAppendText);

@@ -73,14 +73,6 @@ export const handleTest: CommandHandler<"test"> = async (meta, data) => {
 export const handleInit: CommandHandler<"init"> = (meta, data) => {
   registerTools(meta.pi, meta.dispatcher, data.enabled_tools);
 
-  let initMsg = "Connected to Neovim :D";
-
-  if (data.enabled_tools.length) {
-    initMsg += ` Enabled tools: ${data.enabled_tools.join(", ")}`;
-  } else {
-    initMsg += " No tools enabled!";
-  }
-
   for (const event_name of data.events) {
     listenRegisterEventInterest(meta, {
       event_name: event_name,
@@ -95,5 +87,5 @@ export const handleInit: CommandHandler<"init"> = (meta, data) => {
     });
   }
 
-  meta.ctx.ui.notify(initMsg);
+  meta.ctx.ui.notify("Connected to Neovim :D");
 };

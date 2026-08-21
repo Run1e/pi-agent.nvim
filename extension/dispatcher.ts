@@ -5,14 +5,13 @@ import {
 
 import { CommandHandler, PiCommand, PiCommands } from "./commands";
 import { EventListener, NvimEvent, NvimEvents } from "./events";
-import { SendDataFn } from "./pi-agent";
+import { PersistentData, SendDataFn } from "./pi-agent";
 import { NvimCommandResults, NvimCommands } from "./extern";
 
 export type Meta = {
   pi: ExtensionAPI;
   ctx: ExtensionContext;
   dispatcher: Dispatcher;
-  _alreadyListenedTo: string[];
 };
 
 export class Dispatcher {
@@ -26,16 +25,23 @@ export class Dispatcher {
     EventListener<keyof NvimEvents>[]
   >();
 
+  public persistentData: PersistentData;
+
   private pi: ExtensionAPI;
   private ctx: ExtensionContext;
   private sendData: SendDataFn;
   private nextId = 100;
-  private _alreadyListenedTo: string[] = [];
 
-  constructor(pi: ExtensionAPI, ctx: ExtensionContext, sendData: SendDataFn) {
+  constructor(
+    pi: ExtensionAPI,
+    ctx: ExtensionContext,
+    sendData: SendDataFn,
+    persistentData: PersistentData,
+  ) {
     this.pi = pi;
     this.ctx = ctx;
     this.sendData = sendData;
+    this.persistentData = persistentData;
   }
 
   setHandler<K extends keyof PiCommands>(name: K, handler: CommandHandler<K>) {
@@ -157,7 +163,7 @@ export class Dispatcher {
       pi: this.pi,
       ctx: this.ctx,
       dispatcher: this,
-      _alreadyListenedTo: this._alreadyListenedTo,
+      persistentData: this.persistentData,
     };
   }
 

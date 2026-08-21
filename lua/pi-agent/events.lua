@@ -39,11 +39,23 @@ function M.pi_event(pi, event)
 			utils.error(
 				string.format("blocking pi listener for '%s' failed with error: %s", event.name, tostring(result))
 			)
-			pi.send(nil, "event", "pi_event_response", { correlation_id = event.correlation_id, result = nil })
+			pi.send(
+				nil,
+				"event",
+				"pi_event_response",
+				{ correlation_id = event.correlation_id, result = nil, error = tostring(result) }
+			)
 		else
-			pi.send(nil, "event", "pi_event_response", { correlation_id = event.correlation_id, result = result })
+			pi.send(
+				nil,
+				"event",
+				"pi_event_response",
+				{ correlation_id = event.correlation_id, result = result, error = nil }
+			)
 		end
 	end
 end
+
+function M.register_event_interest(pi, event) end
 
 return M

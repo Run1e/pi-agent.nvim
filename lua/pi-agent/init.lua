@@ -298,7 +298,9 @@ local function _on(event_name, listener, blocking)
 		-- and add to blocking list if it doesn't
 		if not utils.list_contains(Pi.pi_events_blocking, event_name) then
 			table.insert(Pi.pi_events_blocking, event_name)
-			Pi.send(nil, "event", "register_event_interest", { blocking = true })
+			if Pi.ready() then
+				Pi.send(nil, "event", "register_event_interest", { event_name = event_name, blocking = true })
+			end
 		end
 
 		Pi.pi_event_listeners_blocking[event_name] = listener
@@ -307,7 +309,9 @@ local function _on(event_name, listener, blocking)
 		if not utils.list_contains(Pi.pi_events_blocking, event_name) then
 			if not utils.list_contains(Pi.pi_events, event_name) then
 				table.insert(Pi.pi_events, event_name)
-				Pi.send(nil, "event", "register_event_interest", { blocking = false })
+				if Pi.ready() then
+					Pi.send(nil, "event", "register_event_interest", { event_name = event_name, blocking = false })
+				end
 			end
 		end
 

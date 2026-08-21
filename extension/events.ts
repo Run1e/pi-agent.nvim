@@ -7,7 +7,11 @@ export type NvimEvents = {
     event_name: string;
     blocking: boolean;
   };
-  pi_event_response: { correlation_id: number; result: any };
+  pi_event_response: {
+    correlation_id: number;
+    result?: any;
+    error?: string;
+  };
 };
 
 export type NvimEvent<K extends keyof NvimEvents = keyof NvimEvents> = {
@@ -23,7 +27,13 @@ export const listenRegisterEventInterest: EventListener<
   "register_event_interest"
 > = (meta, data) => {
   // don't double-register events bound for nvim
-  if (meta._alreadyListenedTo.includes(data.event_name)) {
+  const ed = meta.dispatcher.persistentData;
+
+  const needsUpgrade =
+    data.blocking && !ed.blockingListeners.get(data.event_name);
+
+  if (ed.registeredListeners.includes(data.event_name) && !needsUpgrade) {
+    meta.ctx.ui.notify("doesn't need to listen");
     return;
   }
 
@@ -42,7 +52,7 @@ export const listenRegisterEventInterest: EventListener<
         event: event,
       });
 
-    if (data.blocking) {
+    if (ed.blockingListeners.get(data.event_name) ?? false) {
       const p = meta.dispatcher.waitForEvent(
         "pi_event_response",
         (event) => event.correlation_id === correlationId,
@@ -50,11 +60,23 @@ export const listenRegisterEventInterest: EventListener<
       );
 
       sender();
-      return (await p).result;
+
+      const piEventResponse = await p;
+
+      if (piEventResponse.error) {
+        throw new Error(piEventResponse.error);
+      }
+
+      return piEventResponse.result;
     } else {
       sender();
     }
-
-    meta._alreadyListenedTo.push(data.event_name);
   });
+
+  meta.dispatcher.persistentData.blockingListeners.set(
+    data.event_name,
+    data.blocking,
+  );
+
+  meta.dispatcher.persistentData.registeredListeners.push(data.event_name);
 };
