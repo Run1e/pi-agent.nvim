@@ -15,7 +15,7 @@ local M = {}
 
 ---@param _ nil
 ---@return string[]
-function M.nvim_get_qflist(_)
+function M.nvim_get_qflist(pi, _)
 	local out = {}
 	local list = vim.fn.getqflist()
 
@@ -30,7 +30,7 @@ end
 
 ---@param data pi_agent.commands.nvim_set_qflist_data
 ---@return integer
-function M.nvim_set_qflist(data)
+function M.nvim_set_qflist(pi, data)
 	local items = {}
 	for _, e in ipairs(data.entries) do
 		local filename = vim.fn.fnamemodify(e.file, ":p")

@@ -72,7 +72,7 @@ function M.configure(opts)
 	return M
 end
 
----@param pi pi_agent
+---@param pi pi_agent.Pi
 function M.open(pi)
 	M.tab_id = nil
 	M.pane_id = nil

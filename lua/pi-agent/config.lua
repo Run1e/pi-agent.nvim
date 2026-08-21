@@ -4,7 +4,7 @@ local M = {}
 
 ---@class pi_agent.Surface
 ---@field configure fun(opts: table?): pi_agent.Surface
----@field open fun(pi: pi_agent): nil
+---@field open fun(pi: pi_agent.Pi): nil
 ---@field close fun(): nil
 ---@field focus fun(): nil
 ---@field validate fun(): boolean

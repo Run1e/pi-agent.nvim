@@ -11,8 +11,8 @@ local utils = require("pi-agent.utils")
 ---@field value any?
 
 ---@alias pi_agent.Callback fun(result: pi_agent.CallbackResult)
----@alias pi_agent.CommandHandler fun(data: any): any?
----@alias pi_agent.EventListener fun(data: any)
+---@alias pi_agent.CommandHandler fun(pi: pi_agent.Pi, data: any): any?
+---@alias pi_agent.EventListener fun(pi: pi_agent.Pi, data: any)
 ---@alias pi_agent.PiEventListener fun(event: any): any?
 
 ---@class pi_agent.CommandSuccessData
@@ -23,52 +23,52 @@ local utils = require("pi-agent.utils")
 ---@field correlation_id number
 ---@field error string
 
----@class pi_agent
-local M = {}
+---@class pi_agent.Pi
+local Pi = {}
 
-M.setup_completed = false
+Pi.setup_completed = false
 
 ---@type table<string, pi_agent.CommandHandler>
-M.handlers = {}
+Pi.handlers = {}
 
 ---@type table<string, pi_agent.EventListener[]>
-M.listeners = {}
+Pi.listeners = {}
 
 ---@type table<number, uv.uv_timer_t>
-M.timers = {}
+Pi.timers = {}
 
 ---@type table<number, pi_agent.Callback>
-M.callbacks = {}
+Pi.callbacks = {}
 
 ---@type pi_agent.Server?
-M.server = nil
+Pi.server = nil
 
 ---@type string?
-M.session_name = nil
+Pi.session_name = nil
 
 ---@type string?
-M.socket_path = nil
+Pi.socket_path = nil
 
 ---@type integer
-M.next_id = 1
+Pi.next_id = 1
 
 ---@type string[]
-M.pi_events = {}
+Pi.pi_events = {}
 
 ---@type string[]
-M.pi_events_blocking = {}
+Pi.pi_events_blocking = {}
 
 ---@type table<string, pi_agent.PiEventListener[]>
-M.pi_event_listeners = {}
+Pi.pi_event_listeners = {}
 
 ---@type table<string, pi_agent.PiEventListener>
-M.pi_event_listeners_blocking = {}
+Pi.pi_event_listeners_blocking = {}
 
 ---@param cb pi_agent.Callback?
 ---@param reason string?
 ---@param err string?
 ---@param value any?
-function M.invoke_cb(cb, reason, err, value)
+function Pi.invoke_cb(cb, reason, err, value)
 	-- call_cb could be called from just about anywhere so we want to schedule on the event loop
 	-- so we don't get randomly rekt further down the call stack
 	vim.schedule(function()
@@ -93,84 +93,84 @@ function M.invoke_cb(cb, reason, err, value)
 end
 
 ---@param correlation_id number
-function M.clear_correlation(correlation_id)
-	local timer = M.timers[correlation_id]
+function Pi.clear_correlation(correlation_id)
+	local timer = Pi.timers[correlation_id]
 	if timer ~= nil then
 		timer:stop()
 		timer:close()
 	end
 
-	M.timers[correlation_id] = nil
-	M.callbacks[correlation_id] = nil
+	Pi.timers[correlation_id] = nil
+	Pi.callbacks[correlation_id] = nil
 end
 
 ---@param opts pi_agent.config.Opts?
-function M.setup(opts)
-	if M.setup_completed then
+function Pi.setup(opts)
+	if Pi.setup_completed then
 		return
 	end
 
 	config.setup(opts)
 
-	M.next_id = 1
-	M.session_name = nil
-	M.socket_path = nil
+	Pi.next_id = 1
+	Pi.session_name = nil
+	Pi.socket_path = nil
 
 	---@param data any
-	local on_testcommand = function(data)
+	local on_testcommand = function(pi, data)
 		utils.info("in testcommand")
 		utils.inspect(data)
 		return { ret = "value" }
 	end
 
-	M.set_handler("testcommand", on_testcommand)
-	M.set_handler("nvim_get_qflist", commands.nvim_get_qflist)
-	M.set_handler("nvim_set_qflist", commands.nvim_set_qflist)
+	Pi.set_handler("testcommand", on_testcommand)
+	Pi.set_handler("nvim_get_qflist", commands.nvim_get_qflist)
+	Pi.set_handler("nvim_set_qflist", commands.nvim_set_qflist)
 
-	M.add_listener("pong", events.pong)
-	M.add_listener("command_success", events.on_command_success)
-	M.add_listener("command_failure", events.on_command_failure)
-	M.add_listener("pi_event", events.pi_event)
+	Pi.add_listener("pong", events.pong)
+	Pi.add_listener("command_success", events.on_command_success)
+	Pi.add_listener("command_failure", events.on_command_failure)
+	Pi.add_listener("pi_event", events.pi_event)
 
-	M.setup_completed = true
+	Pi.setup_completed = true
 end
 
-function M.start()
+function Pi.start()
 	-- if already running, just dispatch focus instead
-	if M.ready() then
-		M.focus()
+	if Pi.ready() then
+		Pi.focus()
 		return
 	end
 
 	local session_name = utils.make_session_name()
-	M.session_name = session_name
+	Pi.session_name = session_name
 
 	local socket_path = utils.get_socket_dir() .. "/" .. session_name .. ".sock"
-	M.socket_path = socket_path
+	Pi.socket_path = socket_path
 
-	M.server = server.new(socket_path, M.on_connect, M.on_disconnect, M.on_message)
+	Pi.server = server.new(socket_path, Pi.on_connect, Pi.on_disconnect, Pi.on_message)
 
 	local opts = config.get_opts()
-	opts.surface.open(M)
+	opts.surface.open(Pi)
 
 	if opts.focus_on_open then
 		opts.surface.focus()
 	end
 end
 
-function M.stop()
-	if M.server ~= nil then
-		M.server:stop()
+function Pi.stop()
+	if Pi.server ~= nil then
+		Pi.server:stop()
 	end
 
-	M.server = nil
-	M.session_name = nil
-	M.socket_path = nil
+	Pi.server = nil
+	Pi.session_name = nil
+	Pi.socket_path = nil
 end
 
 ---@param name string
 ---@return pi_agent.Surface
-function M.get_surface(name)
+function Pi.get_surface(name)
 	if not config.valid_surfaces[name] then
 		utils.error(
 			string.format(
@@ -187,15 +187,15 @@ function M.get_surface(name)
 end
 
 ---@return boolean
-function M.ready()
-	return M.server ~= nil and M.server:is_active()
+function Pi.ready()
+	return Pi.server ~= nil and Pi.server:is_active()
 end
 
 ---@param cb pi_agent.Callback?
 ---@return boolean
 local function ready_guard(cb)
-	if not M.ready() then
-		M.invoke_cb(cb, "error", "Not connected to Pi, run require('pi-agent').start()")
+	if not Pi.ready() then
+		Pi.invoke_cb(cb, "error", "Not connected to Pi, run require('pi-agent').start()")
 		return false
 	end
 
@@ -206,7 +206,7 @@ end
 ---@param type "command"|"event"
 ---@param name string
 ---@param data any
-function M.send(cb, type, name, data)
+function Pi.send(cb, type, name, data)
 	if not ready_guard(cb) then
 		return
 	end
@@ -216,54 +216,54 @@ function M.send(cb, type, name, data)
 	end
 
 	local timer
-	local correlation_id = M.next_id
+	local correlation_id = Pi.next_id
 
 	-- for commands we want to check for acks/nacks returning
 	if type == "command" then
-		M.callbacks[M.next_id] = cb
+		Pi.callbacks[Pi.next_id] = cb
 
 		timer = vim.uv.new_timer()
 		assert(timer, "failed to create timer?")
-		M.timers[correlation_id] = timer
+		Pi.timers[correlation_id] = timer
 
 		timer:start(2500, 0, function()
-			M.clear_correlation(correlation_id)
-			M.invoke_cb(cb, "timeout", "command '" .. name .. "' timed out")
+			Pi.clear_correlation(correlation_id)
+			Pi.invoke_cb(cb, "timeout", "command '" .. name .. "' timed out")
 		end)
 	end
 
 	-- would've loved a uuid for the id but eh this is fine?
-	M.server:send({ correlation_id = correlation_id, type = type, name = name, data = data })
-	M.next_id = M.next_id + 1
+	Pi.server:send({ correlation_id = correlation_id, type = type, name = name, data = data })
+	Pi.next_id = Pi.next_id + 1
 end
 
 ---@param command_name string
 ---@param func pi_agent.CommandHandler
-function M.set_handler(command_name, func)
-	M.handlers[command_name] = func
+function Pi.set_handler(command_name, func)
+	Pi.handlers[command_name] = func
 end
 
 ---@param event_name string
 ---@param func pi_agent.EventListener
-function M.add_listener(event_name, func)
-	M.listeners[event_name] = M.listeners[event_name] or {}
-	table.insert(M.listeners[event_name], func)
+function Pi.add_listener(event_name, func)
+	Pi.listeners[event_name] = Pi.listeners[event_name] or {}
+	table.insert(Pi.listeners[event_name], func)
 end
 
 ---@param msg pi_agent.Message
-function M.on_message(msg)
+function Pi.on_message(msg)
 	if msg.type == "command" then
-		local handler = M.handlers[msg.name]
+		local handler = Pi.handlers[msg.name]
 
 		if handler then
 			local ok, value = pcall(handler, msg.data)
 			if ok then
-				M.send(nil, "event", "command_success", {
+				Pi.send(nil, "event", "command_success", {
 					correlation_id = msg.correlation_id,
 					value = value,
 				})
 			else
-				M.send(nil, "event", "command_failure", {
+				Pi.send(nil, "event", "command_failure", {
 					correlation_id = msg.correlation_id,
 					error = tostring(value),
 				})
@@ -271,8 +271,8 @@ function M.on_message(msg)
 			end
 		end
 	elseif msg.type == "event" then
-		for _, listener in ipairs(M.listeners[msg.name] or {}) do
-			local ok, value = pcall(listener, M, msg.data)
+		for _, listener in ipairs(Pi.listeners[msg.name] or {}) do
+			local ok, value = pcall(listener, Pi, msg.data)
 			if not ok then
 				utils.error(string.format("Listener for event '%s' failed with error: %s", msg.name, tostring(value)))
 			end
@@ -286,49 +286,49 @@ end
 local function _on(event_name, listener, blocking)
 	if blocking == true then
 		-- can't add a blocking listener if there already is one
-		if utils.list_contains(M.pi_events_blocking, event_name) then
+		if utils.list_contains(Pi.pi_events_blocking, event_name) then
 			utils.raise(string.format("pi event '%s' already has a blocking listener added"))
 		end
 
 		-- if blocking, remove from non-blocking if exists
-		if utils.list_contains(M.pi_events, event_name) then
-			utils.list_remove(M.pi_events, event_name)
+		if utils.list_contains(Pi.pi_events, event_name) then
+			utils.list_remove(Pi.pi_events, event_name)
 		end
 
 		-- and add to blocking list if it doesn't
-		if not utils.list_contains(M.pi_events_blocking, event_name) then
-			table.insert(M.pi_events_blocking, event_name)
-			M.send(nil, "event", "register_event_interest", { blocking = true })
+		if not utils.list_contains(Pi.pi_events_blocking, event_name) then
+			table.insert(Pi.pi_events_blocking, event_name)
+			Pi.send(nil, "event", "register_event_interest", { blocking = true })
 		end
 
-		M.pi_event_listeners_blocking[event_name] = listener
+		Pi.pi_event_listeners_blocking[event_name] = listener
 	else
 		-- only add if it exists in neither list so far
-		if not utils.list_contains(M.pi_events_blocking, event_name) then
-			if not utils.list_contains(M.pi_events, event_name) then
-				table.insert(M.pi_events, event_name)
-				M.send(nil, "event", "register_event_interest", { blocking = false })
+		if not utils.list_contains(Pi.pi_events_blocking, event_name) then
+			if not utils.list_contains(Pi.pi_events, event_name) then
+				table.insert(Pi.pi_events, event_name)
+				Pi.send(nil, "event", "register_event_interest", { blocking = false })
 			end
 		end
 
-		M.pi_event_listeners[event_name] = M.pi_event_listeners[event_name] or {}
-		table.insert(M.pi_event_listeners[event_name], listener)
+		Pi.pi_event_listeners[event_name] = Pi.pi_event_listeners[event_name] or {}
+		table.insert(Pi.pi_event_listeners[event_name], listener)
 	end
 end
 
 ---@param event_name string
 ---@param listener fun()
-function M.on(event_name, listener)
+function Pi.on(event_name, listener)
 	_on(event_name, listener, false)
 end
 
 ---@param event_name string
 ---@param listener fun()
-function M.on_blocking(event_name, listener)
+function Pi.on_blocking(event_name, listener)
 	_on(event_name, listener, true)
 end
 
-function M.on_connect()
+function Pi.on_connect()
 	local enabled_tools = {}
 
 	---@type pi_agent.Callback
@@ -356,14 +356,14 @@ function M.on_connect()
 
 	local init_data = {
 		enabled_tools = enabled_tools,
-		events = M.pi_events,
-		events_blocking = M.pi_events_blocking,
+		events = Pi.pi_events,
+		events_blocking = Pi.pi_events_blocking,
 	}
 
-	M.send(cb, "command", "init", init_data)
+	Pi.send(cb, "command", "init", init_data)
 end
 
-function M.on_disconnect()
+function Pi.on_disconnect()
 	utils.info("Pi disconnected D:")
 
 	local opts = config.get_opts()
@@ -373,12 +373,12 @@ function M.on_disconnect()
 	end
 end
 
-function M.ping(cb)
-	M.send(cb, "command", "ping", {})
+function Pi.ping(cb)
+	Pi.send(cb, "command", "ping", {})
 end
 
 ---@param cb pi_agent.Callback?
-function M.focus(cb)
+function Pi.focus(cb)
 	if not ready_guard(cb) then
 		return
 	end
@@ -386,14 +386,14 @@ function M.focus(cb)
 	local ok, err = pcall(config.get_opts().surface.focus)
 
 	if ok then
-		M.invoke_cb(cb)
+		Pi.invoke_cb(cb)
 	else
-		M.invoke_cb(cb, "error", err)
+		Pi.invoke_cb(cb, "error", err)
 	end
 end
 
 ---@param cb pi_agent.Callback?
-function M.close(cb)
+function Pi.close(cb)
 	if not ready_guard(cb) then
 		return
 	end
@@ -401,14 +401,14 @@ function M.close(cb)
 	local ok, err = pcall(config.get_opts().surface.close)
 
 	if ok then
-		M.invoke_cb(cb)
+		Pi.invoke_cb(cb)
 	else
-		M.invoke_cb(cb, "error", err)
+		Pi.invoke_cb(cb, "error", err)
 	end
 end
 
 ---@param cb pi_agent.Callback?
-function M.paste_line_reference(cb)
+function Pi.paste_line_reference(cb)
 	if not ready_guard(cb) then
 		return
 	end
@@ -420,10 +420,10 @@ function M.paste_line_reference(cb)
 	local buf_name = utils.get_buf_name(buf)
 
 	if buf_name == nil then
-		return M.invoke_cb(cb, "error", "Buffer is unnamed")
+		return Pi.invoke_cb(cb, "error", "Buffer is unnamed")
 	end
 
-	M.send(cb, "command", "append_text", {
+	Pi.send(cb, "command", "append_text", {
 		lines = { string.format("%s:%d", buf_name, line[1]) },
 		as_paragraph = false,
 	})
@@ -461,55 +461,55 @@ end
 
 ---@param cb pi_agent.Callback?
 ---@param opts { retain_mode: boolean? }?
-function M.paste_range_reference(cb, opts)
+function Pi.paste_range_reference(cb, opts)
 	if not ready_guard(cb) then
 		return
 	end
 
 	local ok, buf, start_line, end_line = pcall(get_selection_span, opts and opts.retain_mode)
 	if not ok then
-		M.invoke_cb(cb, "error", tostring(buf))
+		Pi.invoke_cb(cb, "error", tostring(buf))
 		return
 	end
 
 	local buf_name = utils.get_buf_name(buf)
 
 	if buf_name == nil then
-		return M.invoke_cb(cb, "error", "Buffer is unnamed")
+		return Pi.invoke_cb(cb, "error", "Buffer is unnamed")
 	end
 
-	M.send(cb, "command", "append_text", {
+	Pi.send(cb, "command", "append_text", {
 		lines = { string.format(end_line == nil and "%s:%d" or "%s:%d-%d", buf_name, start_line, end_line) },
 		as_paragraph = false,
 	})
 end
 
 ---@param cb pi_agent.Callback?
-function M.test(cb)
+function Pi.test(cb)
 	if not ready_guard(cb) then
 		return
 	end
 
-	M.send(cb, "command", "test", {})
+	Pi.send(cb, "command", "test", {})
 end
 
 ---@param cb pi_agent.Callback?
 ---@param opts { retain_mode: boolean? }?
-function M.paste_selection(cb, opts)
+function Pi.paste_selection(cb, opts)
 	if not ready_guard(cb) then
 		return
 	end
 
 	local ok, buf, start_line, end_line = pcall(get_selection_span, opts and opts.retain_mode)
 	if not ok then
-		M.invoke_cb(cb, "error", tostring(buf))
+		Pi.invoke_cb(cb, "error", tostring(buf))
 		return
 	end
 
 	local buf_name = utils.get_buf_name(buf)
 
 	if buf_name == nil then
-		return M.invoke_cb(cb, "error", "Buffer is unnamed")
+		return Pi.invoke_cb(cb, "error", "Buffer is unnamed")
 	end
 
 	if end_line == nil then
@@ -526,16 +526,16 @@ function M.paste_selection(cb, opts)
 	vim.list_extend(with_header, lines)
 	table.insert(with_header, "```")
 
-	M.send(cb, "command", "append_text", { lines = with_header, as_paragraph = true })
+	Pi.send(cb, "command", "append_text", { lines = with_header, as_paragraph = true })
 end
 
 ---@param cb pi_agent.Callback?
-function M.paste_qflist(cb)
+function Pi.paste_qflist(cb)
 	---@type string[]
 	local lines = { "Neovim quickfix list (qflist):" }
 	local qflines = commands.nvim_get_qflist(nil)
 	vim.list_extend(lines, qflines)
-	M.send(cb, "command", "append_text", { lines = lines, as_paragraph = true })
+	Pi.send(cb, "command", "append_text", { lines = lines, as_paragraph = true })
 end
 
-return M
+return Pi

@@ -123,7 +123,7 @@ local function is_job_valid()
 	return true
 end
 
----@param pi pi_agent
+---@param pi pi_agent.Pi
 function M.open(pi)
 	local has_valid_job = is_job_valid()
 
