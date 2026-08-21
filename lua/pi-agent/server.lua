@@ -186,17 +186,16 @@ function Server:on_accept()
 	self:maybe_promote_pending()
 end
 
--- TODO: test this
 function Server:stop()
-	if self.pending_client then
+	if self.pending_client and not self.pending_client:is_closing() then
 		self.pending_client:close()
 	end
 
-	if self.client then
+	if self.client and not self.client:is_closing() then
 		self:close(true)
 	end
 
-	if self.pipe then
+	if self.pipe and not self.pipe:is_closing() then
 		self.pipe:close(function()
 			if self.path then
 				os.remove(self.path)
