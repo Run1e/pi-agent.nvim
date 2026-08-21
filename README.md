@@ -8,7 +8,7 @@ Pragmatic integration between Neovim and the [pi agent harness](https://pi.dev/)
 - Send context directly from Neovim; line/range references, buffer text around cursor, selected range, etc
 - Let your agent read and edit the quickfix list via tools
 - Listen to [pi events](https://pi.dev/docs/latest/extensions#events) in Neovim through Lua
-- Trigger lua functions on pi events: `pi.listen("pi:new_session", function() ... end)`
+- Trigger lua functions on pi events: `pi.on("agent_settled", function() ... end)`
 - Autoreload files on edit
 - pi extension bundled with Neovim plugin, no extra dependencies
 - Built to be hackable and extendable

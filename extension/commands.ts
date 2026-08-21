@@ -10,7 +10,6 @@ export type PiCommands = {
   };
   append_text: { lines: string[]; as_paragraph: boolean };
   ping: {};
-  test: {};
 };
 
 export type PiCommand<K extends keyof PiCommands = keyof PiCommands> = {
@@ -60,14 +59,6 @@ export const handleAppendText: CommandHandler<"append_text"> = (meta, data) => {
 
 export const handlePing: CommandHandler<"ping"> = (meta, data) => {
   meta.dispatcher.sendEvent("pong", {});
-};
-
-export const handleTest: CommandHandler<"test"> = async (meta, data) => {
-  const result = await meta.dispatcher.sendCommand("test_command", {
-    hello: "there",
-  });
-
-  meta.ctx.ui.notify(result.ret);
 };
 
 export const handleInit: CommandHandler<"init"> = (meta, data) => {

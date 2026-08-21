@@ -6,12 +6,7 @@ import type {
 import { Dispatcher } from "./dispatcher.ts";
 
 import { createConnection, Socket } from "net";
-import {
-  handleAppendText,
-  handleInit,
-  handlePing,
-  handleTest,
-} from "./commands.ts";
+import { handleAppendText, handleInit, handlePing } from "./commands.ts";
 import { findSocket } from "./utils.ts";
 import { listenRegisterEventInterest } from "./events.ts";
 
@@ -24,18 +19,8 @@ export type Message = {
   data: any;
 };
 
-export type PersistentData = {
-  registeredListeners: string[];
-  blockingListeners: Map<string, boolean>;
-};
-
 let client: Socket | null = null;
 let dispatcher: Dispatcher | null = null;
-
-let persistentData: PersistentData = {
-  registeredListeners: [],
-  blockingListeners: new Map(),
-};
 
 function getClient(): Socket {
   if (!client || client.destroyed) {
@@ -107,12 +92,11 @@ export default function (pi: ExtensionAPI) {
         client.write(JSON.stringify(data) + "\n");
       };
 
-      dispatcher = new Dispatcher(pi, ctx, sendData, persistentData);
+      dispatcher = new Dispatcher(pi, ctx, sendData);
 
       // register command handlers
       dispatcher.setHandler("append_text", handleAppendText);
       dispatcher.setHandler("ping", handlePing);
-      dispatcher.setHandler("test", handleTest);
       dispatcher.setHandler("init", handleInit);
 
       dispatcher.addListener(

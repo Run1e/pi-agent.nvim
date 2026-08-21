@@ -116,14 +116,6 @@ function Pi.setup(opts)
 	Pi.session_name = nil
 	Pi.socket_path = nil
 
-	---@param data any
-	local on_testcommand = function(pi, data)
-		utils.info("in testcommand")
-		utils.inspect(data)
-		return { ret = "value" }
-	end
-
-	Pi.set_handler("testcommand", on_testcommand)
 	Pi.set_handler("nvim_get_qflist", commands.nvim_get_qflist)
 	Pi.set_handler("nvim_set_qflist", commands.nvim_set_qflist)
 
@@ -256,7 +248,7 @@ function Pi.on_message(msg)
 		local handler = Pi.handlers[msg.name]
 
 		if handler then
-			local ok, value = pcall(handler, msg.data)
+			local ok, value = pcall(handler, Pi, msg.data)
 			if ok then
 				Pi.send(nil, "event", "command_success", {
 					correlation_id = msg.correlation_id,
@@ -486,15 +478,6 @@ function Pi.paste_range_reference(cb, opts)
 		lines = { string.format(end_line == nil and "%s:%d" or "%s:%d-%d", buf_name, start_line, end_line) },
 		as_paragraph = false,
 	})
-end
-
----@param cb pi_agent.Callback?
-function Pi.test(cb)
-	if not ready_guard(cb) then
-		return
-	end
-
-	Pi.send(cb, "command", "test", {})
 end
 
 ---@param cb pi_agent.Callback?

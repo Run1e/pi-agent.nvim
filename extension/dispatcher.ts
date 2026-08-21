@@ -4,9 +4,19 @@ import {
 } from "@earendil-works/pi-coding-agent";
 
 import { CommandHandler, PiCommand, PiCommands } from "./commands";
-import { EventListener, NvimEvent, NvimEvents } from "./events";
-import { PersistentData, SendDataFn } from "./pi-agent";
-import { NvimCommandResults, NvimCommands } from "./extern";
+import { EventListener } from "./events";
+import { SendDataFn } from "./pi-agent";
+import {
+  NvimCommandResults,
+  NvimCommands,
+  NvimEvent,
+  NvimEvents,
+} from "./extern";
+
+export type EventData = {
+  registeredListeners: string[];
+  blockingListeners: Map<string, boolean>;
+};
 
 export type Meta = {
   pi: ExtensionAPI;
@@ -25,23 +35,20 @@ export class Dispatcher {
     EventListener<keyof NvimEvents>[]
   >();
 
-  public persistentData: PersistentData;
-
   private pi: ExtensionAPI;
   private ctx: ExtensionContext;
   private sendData: SendDataFn;
   private nextId = 100;
 
-  constructor(
-    pi: ExtensionAPI,
-    ctx: ExtensionContext,
-    sendData: SendDataFn,
-    persistentData: PersistentData,
-  ) {
+  public eventData: EventData = {
+    registeredListeners: [],
+    blockingListeners: new Map(),
+  };
+
+  constructor(pi: ExtensionAPI, ctx: ExtensionContext, sendData: SendDataFn) {
     this.pi = pi;
     this.ctx = ctx;
     this.sendData = sendData;
-    this.persistentData = persistentData;
   }
 
   setHandler<K extends keyof PiCommands>(name: K, handler: CommandHandler<K>) {
@@ -163,26 +170,28 @@ export class Dispatcher {
       pi: this.pi,
       ctx: this.ctx,
       dispatcher: this,
-      persistentData: this.persistentData,
     };
   }
 
   async handleCommand<K extends keyof PiCommands>(command: PiCommand<K>) {
-    const handler = this.handlers.get(command.name);
-    if (handler == undefined) {
-      return;
-    }
-
     let value;
 
     try {
+      const handler = this.handlers.get(command.name);
+      if (handler == undefined) {
+        throw new Error(`Unknown command: ${command.name}`);
+      }
+
       value = await handler(this.buildMeta(), command.data);
     } catch (e: any) {
       this.sendData({
         type: "event",
         name: "command_failure",
         correlation_id: command.correlation_id,
-        data: { correlation_id: command.correlation_id, error: e.message },
+        data: {
+          correlation_id: command.correlation_id,
+          error: e?.message ?? String(e),
+        },
       });
       return;
     }
@@ -204,7 +213,7 @@ export class Dispatcher {
         listener(meta, event.data);
       } catch (e: any) {
         this.ctx.ui.notify(
-          `Event listener for event '${event.name}' threw: ${e.message}`,
+          `Event listener for event '${event.name}' threw: ${e?.message ?? String(e)}`,
         );
         continue;
       }
@@ -233,7 +242,7 @@ export class Dispatcher {
     if (this.isCommand(msg)) {
       this.handleCommand(msg).catch((e) => {
         this.ctx.ui.notify(
-          `Command handler for command '${msg.name}' threw: ${e.message}`,
+          `Command handler for command '${msg.name}' threw: ${e?.message ?? String(e)}`,
         );
       });
     } else if (this.isEvent(msg)) {
