@@ -13,6 +13,7 @@ import {
   handleTest,
 } from "./commands.ts";
 import { findSocket } from "./utils.ts";
+import { listenRegisterEventInterest } from "./events.ts";
 
 export type SendDataFn = (data: Message) => void;
 
@@ -103,6 +104,11 @@ export default function (pi: ExtensionAPI) {
       dispatcher.setHandler("ping", handlePing);
       dispatcher.setHandler("test", handleTest);
       dispatcher.setHandler("init", handleInit);
+
+      dispatcher.addListener(
+        "register_event_interest",
+        listenRegisterEventInterest,
+      );
     }
   });
 

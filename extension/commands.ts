@@ -1,8 +1,13 @@
 import { Meta } from "./dispatcher";
+import { listenRegisterEventInterest } from "./events";
 import { registerTools } from "./tools";
 
 export type PiCommands = {
-  init: { enabled_tools: string[] };
+  init: {
+    enabled_tools: string[];
+    events: string[];
+    events_blocking: string[];
+  };
   append_text: { lines: string[]; as_paragraph: boolean };
   ping: {};
   test: {};
@@ -74,6 +79,20 @@ export const handleInit: CommandHandler<"init"> = (meta, data) => {
     initMsg += ` Enabled tools: ${data.enabled_tools.join(", ")}`;
   } else {
     initMsg += " No tools enabled!";
+  }
+
+  for (const event_name of data.events) {
+    listenRegisterEventInterest(meta, {
+      event_name: event_name,
+      blocking: false,
+    });
+  }
+
+  for (const event_name of data.events_blocking) {
+    listenRegisterEventInterest(meta, {
+      event_name: event_name,
+      blocking: true,
+    });
   }
 
   meta.ctx.ui.notify(initMsg);

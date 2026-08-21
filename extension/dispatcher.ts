@@ -4,7 +4,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 
 import { CommandHandler, PiCommand, PiCommands } from "./commands";
-import { EventListener, PiEvent, PiEvents } from "./events";
+import { EventListener, NvimEvent, NvimEvents } from "./events";
 import { SendDataFn } from "./pi-agent";
 import { NvimCommandResults, NvimCommands } from "./extern";
 
@@ -12,6 +12,7 @@ export type Meta = {
   pi: ExtensionAPI;
   ctx: ExtensionContext;
   dispatcher: Dispatcher;
+  _alreadyListenedTo: string[];
 };
 
 export class Dispatcher {
@@ -21,14 +22,15 @@ export class Dispatcher {
   >();
 
   private listeners = new Map<
-    keyof PiEvents,
-    EventListener<keyof PiEvents>[]
+    keyof NvimEvents,
+    EventListener<keyof NvimEvents>[]
   >();
 
   private pi: ExtensionAPI;
   private ctx: ExtensionContext;
   private sendData: SendDataFn;
   private nextId = 100;
+  private _alreadyListenedTo: string[] = [];
 
   constructor(pi: ExtensionAPI, ctx: ExtensionContext, sendData: SendDataFn) {
     this.pi = pi;
@@ -40,7 +42,7 @@ export class Dispatcher {
     this.handlers.set(name, handler as CommandHandler<keyof PiCommands>);
   }
 
-  addListener<K extends keyof PiEvents>(name: K, listener: EventListener<K>) {
+  addListener<K extends keyof NvimEvents>(name: K, listener: EventListener<K>) {
     let arr = this.listeners.get(name);
 
     if (arr === undefined) {
@@ -48,12 +50,14 @@ export class Dispatcher {
       this.listeners.set(name, arr);
     }
 
-    arr.push(listener as EventListener<keyof PiEvents>);
+    arr.push(listener as EventListener<keyof NvimEvents>);
 
     return () => {
       const current = this.listeners.get(name);
       if (current !== undefined) {
-        const idx = current.indexOf(listener as EventListener<keyof PiEvents>);
+        const idx = current.indexOf(
+          listener as EventListener<keyof NvimEvents>,
+        );
         if (idx !== -1) {
           current.splice(idx, 1);
         }
@@ -96,12 +100,12 @@ export class Dispatcher {
         reject(new Error(`command '${name}' timed out`));
       }, 2500);
 
-      successUnsubscribe = this.addListener("command_success", (data) => {
+      successUnsubscribe = this.addListener("command_success", (meta, data) => {
         if (data.correlation_id !== newCorrelationId) return;
         resolve(data.value as NvimCommandResults[K]);
       });
 
-      failureUnsubscribe = this.addListener("command_failure", (data) => {
+      failureUnsubscribe = this.addListener("command_failure", (meta, data) => {
         if (data.correlation_id !== newCorrelationId) return;
         reject(new Error(data.error));
       });
@@ -134,6 +138,7 @@ export class Dispatcher {
       pi: this.pi,
       ctx: this.ctx,
       dispatcher: this,
+      _alreadyListenedTo: this._alreadyListenedTo,
     };
   }
 
@@ -165,7 +170,7 @@ export class Dispatcher {
     });
   }
 
-  handleEvent<K extends keyof PiEvents>(event: PiEvent<K>) {
+  handleEvent<K extends keyof NvimEvents>(event: NvimEvent<K>) {
     const listeners = this.listeners.get(event.name) ?? [];
 
     for (const listener of listeners) {
@@ -189,7 +194,7 @@ export class Dispatcher {
     );
   }
 
-  isEvent(msg: unknown): msg is PiEvent {
+  isEvent(msg: unknown): msg is NvimEvent {
     return (
       msg != null &&
       typeof msg == "object" &&

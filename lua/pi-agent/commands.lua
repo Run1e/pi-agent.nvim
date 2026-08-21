@@ -16,9 +16,9 @@ local M = {}
 ---@param _ nil
 ---@return string[]
 function M.nvim_get_qflist(_)
-	---@type string[]
 	local out = {}
 	local list = vim.fn.getqflist()
+
 	for _, entry in ipairs(list) do
 		local buf_name = utils.get_buf_name(entry.bufnr)
 		local text = string.format("%s|%d col %d|%s", buf_name or "", entry.lnum, entry.col, entry.text or "")
@@ -31,11 +31,9 @@ end
 ---@param data pi_agent.commands.nvim_set_qflist_data
 ---@return integer
 function M.nvim_set_qflist(data)
-	---@type table[]
 	local items = {}
 	for _, e in ipairs(data.entries) do
 		local filename = vim.fn.fnamemodify(e.file, ":p")
-		---@type string?
 		local text
 
 		if e.special_comment == nil then

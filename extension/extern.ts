@@ -17,3 +17,10 @@ export type NvimCommandResults = {
   nvim_set_qflist: number;
   test_command: { ret: string };
 };
+
+export type NvimEvents = {
+  register_event_interest: {
+    event_name: string;
+    blocking: boolean;
+  };
+};

@@ -13,6 +13,7 @@ local utils = require("pi-agent.utils")
 ---@alias pi_agent.Callback fun(result: pi_agent.CallbackResult)
 ---@alias pi_agent.CommandHandler fun(data: any): any?
 ---@alias pi_agent.EventListener fun(data: any)
+---@alias pi_agent.PiEventListener fun(event: any): any?
 
 ---@class pi_agent.CommandSuccessData
 ---@field correlation_id number
@@ -50,6 +51,18 @@ M.socket_path = nil
 
 ---@type integer
 M.next_id = 1
+
+---@type string[]
+M.pi_events = {}
+
+---@type string[]
+M.pi_events_blocking = {}
+
+---@type table<string, pi_agent.PiEventListener[]>
+M.pi_event_listeners = {}
+
+---@type table<string, pi_agent.PiEventListener>
+M.pi_event_listeners_blocking = {}
 
 ---@param cb pi_agent.Callback?
 ---@param reason string?
@@ -134,6 +147,25 @@ function M.setup(opts)
 	end
 
 	M.add_listener("command_failure", on_command_failure)
+
+	M.add_listener("pi_event", function(event)
+		local non_blocking_listeners = M.pi_event_listeners[event.name] or {}
+		local blocking_listener = M.pi_event_listeners_blocking[event.name]
+
+		for _, listener in ipairs(non_blocking_listeners) do
+			local ok, err = pcall(listener, event)
+			if not ok then
+				utils.error(string.format("non-blocking pi listener for '%s' failed with error: %s", event.name, err))
+			end
+		end
+
+		if blocking_listener ~= nil then
+			local ok, err = pcall(blocking_listener, event)
+			if not ok then
+				utils.error(string.format("blocking pi listener for '%s' failed with error: %s", event.name, err))
+			end
+		end
+	end)
 
 	M.setup_completed = true
 end
@@ -283,6 +315,55 @@ function M.on_message(msg)
 	end
 end
 
+---@param event_name string
+---@param listener fun()
+---@param blocking boolean?
+local function _on(event_name, listener, blocking)
+	local listener_list
+	if blocking == true then
+		-- can't add a blocking listener if there already is one
+		if utils.list_contains(M.pi_events_blocking, event_name) then
+			utils.raise(string.format("pi event '%s' already has a blocking listener added"))
+		end
+
+		-- if blocking, remove from non-blocking if exists
+		if utils.list_contains(M.pi_events, event_name) then
+			utils.list_remove(M.pi_events, event_name)
+		end
+
+		-- and add to blocking list if it doesn't
+		if not utils.list_contains(M.pi_events_blocking, event_name) then
+			table.insert(M.pi_events_blocking, event_name)
+			M.send(nil, "event", "register_event_interest", { blocking = true })
+		end
+
+		M.pi_event_listeners_blocking[event_name] = listener
+	else
+		-- only add if it exists in neither list so far
+		if not utils.list_contains(M.pi_events_blocking, event_name) then
+			if not utils.list_contains(M.pi_events, event_name) then
+				table.insert(M.pi_events, event_name)
+				M.send(nil, "event", "register_event_interest", { blocking = false })
+			end
+		end
+
+		M.pi_event_listeners[event_name] = M.pi_event_listeners[event_name] or {}
+		table.insert(M.pi_event_listeners[event_name], listener)
+	end
+end
+
+---@param event_name string
+---@param listener fun()
+function M.on(event_name, listener)
+	_on(event_name, listener, false)
+end
+
+---@param event_name string
+---@param listener fun()
+function M.on_blocking(event_name, listener)
+	_on(event_name, listener, true)
+end
+
 function M.on_connect()
 	local enabled_tools = {}
 
@@ -295,20 +376,27 @@ function M.on_connect()
 		utils.info("Connected to Pi :D")
 	end
 
-	local all_tools = {
-		"nvim_get_qflist",
-		"nvim_set_qflist",
-	}
-
 	local tools = config.get_opts().tools
 
-	for _, tool_name in ipairs(all_tools) do
-		if not tools.disable_all and tools[tool_name].enabled then
+	for tool_name, tool_config in pairs(tools) do
+		-- TODO: fix this I hate this a lot much hate
+		if tool_name == "disable_all" then
+			goto continue
+		end
+
+		if not tools.disable_all and tool_config.enabled then
 			table.insert(enabled_tools, tool_name)
 		end
+		::continue::
 	end
 
-	M.send(cb, "command", "init", { enabled_tools = enabled_tools })
+	local init_data = {
+		enabled_tools = enabled_tools,
+		events = M.pi_events,
+		events_blocking = M.pi_events_blocking,
+	}
+
+	M.send(cb, "command", "init", init_data)
 end
 
 function M.on_disconnect()

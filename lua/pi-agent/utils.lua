@@ -98,4 +98,29 @@ function M.get_buf_name(buf)
 	return vim.fn.fnamemodify(buf_name, ":.")
 end
 
+---@param lst any[]
+---@param item any
+function M.list_contains(lst, item)
+	for _, lst_item in ipairs(lst) do
+		if item == lst_item then
+			return true
+		end
+	end
+
+	return false
+end
+
+---@param lst any[]
+---@param item any
+function M.list_remove(lst, item)
+	for idx, lst_item in ipairs(lst) do
+		if item == lst_item then
+			table.remove(lst, idx)
+			return true
+		end
+	end
+
+	return false
+end
+
 return M
