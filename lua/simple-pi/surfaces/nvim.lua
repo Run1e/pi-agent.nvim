@@ -1,11 +1,8 @@
 local config = require("simple-pi.config")
 local utils = require("simple-pi.utils")
 
----Surface that runs pi in a terminal buffer inside Neovim.
----(implements simple_pi.Surface, declared in simple-pi/config.lua)
 local M = {}
 
----Surface options.
 ---@class simple_pi.NvimSurfaceOpts
 ---@field open_in "window"|"tab"
 ---@field auto_insert_on_focus boolean
@@ -76,7 +73,6 @@ function M.setup(opts)
 	return M
 end
 
----Launch the pi job in the surface buffer.
 local function start_term()
 	local jobstart_opts = {
 		cwd = vim.uv.cwd(),
@@ -86,13 +82,12 @@ local function start_term()
 	}
 
 	local result = vim.fn.jobstart(
-		utils.make_pi_launch_command(config.get_opts().pi_bin, assert(require("simple-pi").session_name)),
+		utils.make_pi_launch_command(config.get_opts().pi_bin, require("simple-pi").session_name),
 		jobstart_opts
 	)
 
 	if result < 1 then
-		utils.error("Failed to jobstart Pi in Nvim surface")
-		return
+		utils.raise("Failed to jobstart Pi in Nvim surface")
 	end
 
 	if M.buf_id == nil then
@@ -103,7 +98,6 @@ local function start_term()
 	vim.bo[M.buf_id].bufhidden = "hide"
 end
 
----True if the pi job is still running and attached to our buffer.
 ---@return boolean
 local function is_job_valid()
 	if M.chan_id == nil then
@@ -127,7 +121,6 @@ local function is_job_valid()
 	return true
 end
 
----Open (or reuse) the surface and start the pi job if needed.
 ---@param pi simple_pi
 ---@return boolean
 function M.open(pi)
@@ -158,7 +151,6 @@ function M.open(pi)
 	return true
 end
 
----Close the surface window.
 ---@return boolean
 function M.close()
 	if M.win_id ~= nil then
@@ -169,7 +161,6 @@ function M.close()
 	return true
 end
 
----True if the surface buffer is visible in the given tabpage.
 ---@param tab_id integer
 ---@return boolean
 local function open_in_tab(tab_id)
@@ -183,10 +174,10 @@ local function open_in_tab(tab_id)
 	return false
 end
 
----Create the window if needed and focus it.
+---@return boolean
 local function _focus_window()
 	if M.buf_id == nil then
-		return
+		return false
 	end
 
 	local tab_id = vim.api.nvim_get_current_tabpage()
@@ -208,15 +199,24 @@ local function _focus_window()
 
 		-- vim.api.nvim_win_set_buf(M.win_id, M.buf_id)
 		M.win_id = vim.api.nvim_open_win(M.buf_id, true, cfg)
+		return true
 	else
-		vim.api.nvim_set_current_win(assert(M.win_id))
+		-- we can't close a window that we don't have
+		-- we *could* figure out what window the buffer is in?
+		-- but we should be good I think
+		if M.win_id == nil then
+			return false
+		end
+
+		vim.api.nvim_set_current_win(M.win_id)
+		return true
 	end
 end
 
----Create the tab if needed and focus it.
+---@return boolean
 local function _focus_tab()
 	if M.buf_id == nil then
-		return
+		return false
 	end
 
 	if M.tab_id == nil then
@@ -227,23 +227,28 @@ local function _focus_tab()
 		if not vim.api.nvim_tabpage_is_valid(M.tab_id) or not open_in_tab(M.tab_id) then
 			M.tab_id = nil
 			_focus_tab()
-			return
 		else
 			vim.api.nvim_set_current_tabpage(M.tab_id)
 		end
 	end
+
+	return true
 end
 
----Focus the surface window/tab.
 ---@return boolean
 function M.focus()
 	if M.opts.open_in == "window" then
-		_focus_window()
+		return _focus_window()
 	elseif M.opts.open_in == "tab" then
-		_focus_tab()
+		return _focus_tab()
+	else
+		utils.raise("?")
+		return false
 	end
+end
 
-	return true
+function M.validate()
+	return true -- we're in nvim, we should be fine? lol
 end
 
 return M

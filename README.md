@@ -13,7 +13,7 @@ Pragmatic integration between Neovim and the [Pi agent harness](https://pi.dev/)
 ### PLANNED
 
 - LSP tools (`nvim_get_diagnostics`)
-- Write Pi messages in Neovim via scratch buffer
+- Write Pi messages in Neovim via scratch buffer (`/write`)
 - cmux surface support
 
 ### Tools
@@ -31,7 +31,7 @@ Try asking:
 
 ### Surface
 
-simple-pi supports three "surfaces" out of the box: nvim, tmux, and herdr.
+simple-pi supports three "surfaces" out of the box: nvim, herdr, cmux, and tmux.
 
 To set a specific surface:
 ```lua

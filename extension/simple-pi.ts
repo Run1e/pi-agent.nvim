@@ -20,7 +20,7 @@ let dispatcher: Dispatcher | null = null;
 
 function getClient(): Socket {
   if (!client || client.destroyed) {
-    throw new Error();
+    throw new Error("No valid client running");
   }
 
   return client;
@@ -28,7 +28,7 @@ function getClient(): Socket {
 
 function getContext(): ExtensionContext {
   if (!dispatcher) {
-    throw new Error();
+    throw new Error("No dispatcher, can't provide context");
   }
 
   return dispatcher.getContext();

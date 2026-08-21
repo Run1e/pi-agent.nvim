@@ -31,7 +31,7 @@ local function herdr_run(args)
 	local cmd = { M.opts.herdr_bin }
 	vim.list_extend(cmd, args)
 
-	local completed = vim.system(cmd, { text = true }):wait(1000)
+	local completed = vim.system(cmd, { text = true }):wait(2500)
 
 	-- for these unhappy paths we "mock" the output format that herdr would give
 	-- doing that, the place that invokes this function can handle our errors
@@ -80,7 +80,7 @@ function M.open(pi)
 	local data = herdr_run({ "tab", "create", "--cwd", vim.fn.getcwd() })
 	if data.error then
 		utils.info("Failed to create herdr tab: " .. data.error.message)
-		return
+		return false
 	end
 
 	if not data.result or not data.result.root_pane then
@@ -146,6 +146,14 @@ function M.focus()
 	end
 
 	return true
+end
+
+-- check if herdr_bin actually exists
+-- we could also check for ACCESS_X I guess
+function M.validate()
+	if not vim.fn.executable(M.opts.herdr_bin) then
+		utils.raise(string.format("'%s' is not executable", M.opts.herdr_bin))
+	end
 end
 
 return M

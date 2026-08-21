@@ -34,6 +34,10 @@ M.on_message = nil
 ---@param on_disconnect fun()
 ---@param on_message fun(msg: simple_pi.Message)
 function M.start(path, on_connect, on_disconnect, on_message)
+	if M.pipe ~= nil then
+		utils.raise("Server is already running, don't call .start again")
+	end
+
 	M.path = path
 
 	M.on_connect = on_connect
@@ -167,7 +171,7 @@ function M.on_accept()
 	assert(pending)
 
 	if M.pipe:accept(pending) ~= 0 then
-		error("[simple-pi] Failed accepting new client connection")
+		utils.raise("Failed accepting new client connection")
 	end
 
 	if M.pending_client == nil then

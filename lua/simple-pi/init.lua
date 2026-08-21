@@ -125,7 +125,8 @@ function M.setup(opts)
 	local on_command_failure = function(data)
 		local cb = callbacks[data.correlation_id]
 		clear_correlation(data.correlation_id)
-		invoke_cb(cb, "command_failure", "Pi extension exception with error: " .. data.error)
+		local error_str = (data.error and #data.error) and data.error or "no error"
+		invoke_cb(cb, "command_failure", "Pi extension exception with error: " .. error_str)
 	end
 
 	M.add_listener("command_failure", on_command_failure)
@@ -160,18 +161,13 @@ end
 ---@return simple_pi.Surface
 function M.get_surface(name)
 	---@type table<string, boolean>
-	local default_surfaces = {
-		nvim = true,
-		tmux = true,
-		herdr = true,
-	}
 
-	if not default_surfaces[name] then
+	if not config.valid_surfaces[name] then
 		utils.error(
 			string.format(
 				"'%s' is not a valid surface, options are %s. Defaulting to 'nvim'.",
 				name,
-				table.concat(vim.tbl_keys(default_surfaces), ", ")
+				table.concat(vim.tbl_keys(config.valid_surfaces), ", ")
 			)
 		)
 
@@ -206,18 +202,22 @@ function M.send(cb, type, name, data)
 		return
 	end
 
+	if type == "event" and cb ~= nil then
+		utils.raise("events should not provide callbacks")
+	end
+
 	local timer
 	local correlation_id = M.next_id
 
-	callbacks[M.next_id] = cb
-
 	-- for commands we want to check for acks/nacks returning
 	if type == "command" then
+		callbacks[M.next_id] = cb
+
 		timer = vim.uv.new_timer()
 		assert(timer, "failed to create timer?")
 		timers[correlation_id] = timer
 
-		timer:start(1000, 0, function()
+		timer:start(2500, 0, function()
 			-- if we're running we timed out
 
 			-- close the timer
@@ -271,7 +271,10 @@ function M.on_message(msg)
 		end
 	elseif msg.type == "event" then
 		for _, listener in ipairs(listeners[msg.name] or {}) do
-			pcall(listener, msg.data)
+			local ok, result = pcall(listener, msg.data)
+			if not ok then
+				utils.error(string.format("Listener for event '%s' failed with error: %s", msg.name, result))
+			end
 		end
 	end
 end
@@ -376,7 +379,6 @@ local function get_selection_span(retain_mode)
 	-- unfortunately you need to exit visual mode for the < and > marks to update properly
 	vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<esc>", true, false, true), "x", true)
 
-	local buf = vim.api.nvim_get_current_buf()
 	local start_mark = vim.api.nvim_buf_get_mark(buf, "<")
 	local end_mark = vim.api.nvim_buf_get_mark(buf, ">")
 
@@ -440,7 +442,7 @@ function M.paste_selection(cb, opts)
 	local lines = vim.api.nvim_buf_get_lines(buf, start_line - 1, end_line, false)
 
 	local with_header = {
-		string.format(end_line == nil and "%s:%d" or "%s:%d-%d", buf_name, start_line, end_line),
+		string.format(end_line == start_line and "%s:%d" or "%s:%d-%d", buf_name, start_line, end_line),
 		"```" .. (vim.bo[buf].filetype or ""),
 	}
 

@@ -1,3 +1,5 @@
+local utils = require("simple-pi.utils")
+
 local M = {}
 
 ---@class simple_pi.Surface
@@ -5,6 +7,7 @@ local M = {}
 ---@field open fun(pi: simple_pi): boolean?
 ---@field close fun(): boolean
 ---@field focus fun(): boolean
+---@field validate fun(): nil
 
 ---@class simple_pi.SetQflistToolOpts
 ---@field enabled boolean
@@ -22,6 +25,12 @@ local M = {}
 ---@field focus_on_open boolean
 ---@field close_on_disconnect boolean
 ---@field tools simple_pi.ToolsOpts
+
+M.valid_surfaces = {
+	nvim = true,
+	tmux = true,
+	herdr = true,
+}
 
 ---@type simple_pi.Opts
 M.default_opts = {
@@ -59,9 +68,18 @@ end
 function M.setup(opts)
 	M._opts = vim.tbl_deep_extend("force", vim.deepcopy(M.default_opts), opts or {})
 
+	local default_surface = require("simple-pi.surfaces.nvim")
+
 	-- default to nvim surface
 	if M.get_opts().surface == nil then
-		M.get_opts().surface = require("simple-pi.surfaces.nvim")
+		M.get_opts().surface = default_surface
+	else
+		local ok, err = pcall(M.get_opts().surface.validate)
+		if not ok then
+			utils.error(string.format("Surface failed to validate with error: %s.", err))
+			utils.error("Defaulting to 'nvim' surface.")
+			M.get_opts().surface = default_surface
+		end
 	end
 end
 

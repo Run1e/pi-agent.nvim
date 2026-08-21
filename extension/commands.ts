@@ -20,12 +20,13 @@ export type CommandHandler<K extends keyof PiCommands> = (
 export const handleAppendText: CommandHandler<"append_text"> = (meta, data) => {
   // TODO: possible to insert where the users' cursor is?
   // there's "pasteToEditor" but that doesn't let us do spacing particularly well...
-  const oldText = meta.ctx.ui.getEditorText().replace(/\n+$/, "");
+  let oldText = meta.ctx.ui.getEditorText();
   const joined = data.lines.join("\n");
 
   let newText = "";
 
   if (data.as_paragraph) {
+    oldText = oldText.replace(/\n+$/, "");
     if (!oldText.length) {
       newText = joined;
     } else {
@@ -34,7 +35,7 @@ export const handleAppendText: CommandHandler<"append_text"> = (meta, data) => {
   } else {
     if (!oldText.length) {
       newText = joined;
-    } else if (oldText.endsWith(" ")) {
+    } else if (oldText.endsWith(" ") || oldText.endsWith("\n")) {
       newText = oldText + joined;
     } else {
       newText = oldText + " " + joined;

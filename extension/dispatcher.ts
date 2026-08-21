@@ -95,7 +95,7 @@ export class Dispatcher {
     return new Promise((resolve, reject) => {
       timeoutId = setTimeout(() => {
         reject(new Error(`command '${name}' timed out`));
-      }, 1000);
+      }, 2500);
 
       successUnsubscribe = this.addListener("command_success", (data) => {
         if (data.correlation_id !== newCorrelationId) return;

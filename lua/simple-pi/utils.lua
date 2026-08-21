@@ -84,6 +84,10 @@ end
 ---@param buf integer
 ---@return string?
 function M.get_buf_name(buf)
+	if buf == 0 or buf == nil then
+		return nil
+	end
+
 	local buf_name = vim.api.nvim_buf_get_name(buf)
 
 	-- ignore unsaved/scratch buffers

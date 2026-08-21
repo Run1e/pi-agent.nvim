@@ -7,8 +7,6 @@ export function registerTools(
   dispatcher: Dispatcher,
   enabledTools: string[],
 ) {
-  const tools: ToolInfo[] = pi.getAllTools();
-
   if (enabledTools.includes("nvim_get_qflist")) {
     pi.registerTool({
       name: "nvim_get_qflist",
@@ -49,6 +47,7 @@ export function registerTools(
       description: "Set the Neovim quickfix list",
       promptGuidelines: [
         "Use nvim_set_qflist when you need to set the Neovim quickfix list (qflist).",
+        "NEVER call nvim_set_qflist unprompted, only do so after being asked to, or after suggesting it yourself and being given permission.",
         "You may suggest to put data in the quickfix list for user convenience (like if you have a list of lines with errors, improvements, suggestions, etc).",
         "You can replace the entire quickfix list in one call with action = replace, or you can incrementally append over several calls with action = append.",
         "Call nvim_set_qflist with an empty list to clear the quickfix list.",
