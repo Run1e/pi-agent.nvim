@@ -82,7 +82,7 @@ end
 ---@param correlation_id number
 local function clear_correlation(correlation_id)
 	local timer = M.timers[correlation_id]
-	if timer ~= nil and timer:is_active() then
+	if timer ~= nil then
 		timer:stop()
 		timer:close()
 	end
@@ -230,21 +230,13 @@ function M.send(cb, type, name, data)
 		M.timers[correlation_id] = timer
 
 		timer:start(2500, 0, function()
-			-- if we're running we timed out
-
-			-- close the timer
-			timer:close()
-
-			-- other cleanup
 			clear_correlation(correlation_id)
-
-			-- call callback
 			invoke_cb(cb, "timeout", "command '" .. name .. "' timed out")
 		end)
 	end
 
 	-- would've loved a uuid for the id but eh this is fine?
-	M.server:send({ correlation_id = M.next_id, type = type, name = name, data = data })
+	M.server:send({ correlation_id = correlation_id, type = type, name = name, data = data })
 	M.next_id = M.next_id + 1
 end
 

@@ -12,6 +12,7 @@ Pragmatic integration between Neovim and the [Pi agent harness](https://pi.dev/)
 - Autoreload files on edit
 - Pi extension bundled with Neovim plugin, no extra dependencies
 - Built to be hackable and extendable
+- Event-based communication with explicit successes, failures, and timeouts
 
 ### PLANNED
 

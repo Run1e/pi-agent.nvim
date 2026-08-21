@@ -3,22 +3,15 @@ import {
   ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
 
-import {
-  CommandHandler,
-  NvimCommandResults,
-  NvimCommands,
-  PiCommand,
-  PiCommands,
-} from "./commands";
+import { CommandHandler, PiCommand, PiCommands } from "./commands";
 import { EventListener, PiEvent, PiEvents } from "./events";
 import { SendDataFn } from "./pi-agent";
+import { NvimCommandResults, NvimCommands } from "./extern";
 
 export type Meta = {
   pi: ExtensionAPI;
   ctx: ExtensionContext;
   dispatcher: Dispatcher;
-  invokeCommand: (name: string, data: any) => Promise<any>;
-  sendEvent: (name: string, data: any) => void;
 };
 
 export class Dispatcher {
@@ -141,8 +134,6 @@ export class Dispatcher {
       pi: this.pi,
       ctx: this.ctx,
       dispatcher: this,
-      invokeCommand: this.sendCommand,
-      sendEvent: this.sendEvent,
     };
   }
 

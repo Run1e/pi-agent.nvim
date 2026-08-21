@@ -17,23 +17,6 @@ export type CommandHandler<K extends keyof PiCommands> = (
   data: PiCommands[K],
 ) => any;
 
-export type NvimCommands = {
-  nvim_get_qflist: null;
-  nvim_set_qflist: {
-    entries: {
-      file: string;
-      lnum: number;
-      col: number;
-      special_command?: string;
-    }[];
-  };
-};
-
-export type NvimCommandResults = {
-  nvim_get_qflist: string[];
-  nvim_set_qflist: number;
-};
-
 export const handleAppendText: CommandHandler<"append_text"> = (meta, data) => {
   // TODO: possible to insert where the users' cursor is?
   // there's "pasteToEditor" but that doesn't let us do spacing particularly well...
@@ -71,11 +54,11 @@ export const handleAppendText: CommandHandler<"append_text"> = (meta, data) => {
 };
 
 export const handlePing: CommandHandler<"ping"> = (meta, data) => {
-  meta.sendEvent("pong", {});
+  meta.dispatcher.sendEvent("pong", {});
 };
 
 export const handleTest: CommandHandler<"test"> = async (meta, data) => {
-  const result = await meta.invokeCommand("testcommand", {
+  const result = await meta.dispatcher.sendCommand("test_command", {
     hello: "there",
   });
 
