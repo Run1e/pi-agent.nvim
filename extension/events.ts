@@ -46,6 +46,7 @@ export const listenRegisterEventInterest: EventListener<
       const p = meta.dispatcher.waitForEvent(
         "pi_event_response",
         (event) => event.correlation_id === correlationId,
+        0,
       );
 
       sender();

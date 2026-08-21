@@ -115,23 +115,23 @@ export class Dispatcher {
     name: K,
     data: NvimCommands[K],
   ): Promise<NvimCommandResults[K]> {
-    const newCorrelationId = this.newCorrelationId();
+    const correlationId = this.newCorrelationId();
 
     this.sendData({
       type: "command",
       name: name,
-      correlation_id: newCorrelationId,
+      correlation_id: correlationId,
       data: data,
     });
 
     return Promise.race([
       this.waitForEvent(
         "command_success",
-        (data) => data.correlation_id === newCorrelationId,
+        (data) => data.correlation_id === correlationId,
       ),
       this.waitForEvent(
         "command_failure",
-        (data) => data.correlation_id === newCorrelationId,
+        (data) => data.correlation_id === correlationId,
       ).then((data) => {
         throw new Error(data.error);
       }),
