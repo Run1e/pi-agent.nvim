@@ -13,9 +13,9 @@ local M = {}
 ---@field entries simple_pi.nvim_set_qflist_entry_data[]
 ---@field action "replace"|"append"
 
----@param data nil
+---@param _ nil
 ---@return string[]
-function M.nvim_get_qflist(data)
+function M.nvim_get_qflist(_)
 	---@type string[]
 	local out = {}
 	local list = vim.fn.getqflist()

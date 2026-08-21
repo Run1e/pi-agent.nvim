@@ -10,7 +10,7 @@ local utils = require("simple-pi.utils")
 ---@field error string?
 ---@field value any?
 
----@alias simple_pi.PiCallback fun(result: simple_pi.CallbackResult)
+---@alias simple_pi.Callback fun(result: simple_pi.CallbackResult)
 ---@alias simple_pi.CommandHandler fun(data: any): any?
 ---@alias simple_pi.EventListener fun(data: any)
 
@@ -36,7 +36,7 @@ M.listeners = {}
 ---@type table<number, uv.uv_timer_t>
 M.timers = {}
 
----@type table<number, simple_pi.PiCallback>
+---@type table<number, simple_pi.Callback>
 M.callbacks = {}
 
 ---@type simple_pi.Server?
@@ -51,7 +51,7 @@ M.socket_path = nil
 ---@type integer
 M.next_id = 1
 
----@param cb simple_pi.PiCallback?
+---@param cb simple_pi.Callback?
 ---@param reason string?
 ---@param err string?
 ---@param value any?
@@ -194,7 +194,7 @@ function M.ready()
 	return M.server ~= nil and M.server:is_active()
 end
 
----@param cb simple_pi.PiCallback?
+---@param cb simple_pi.Callback?
 ---@return boolean
 local function ready_guard(cb)
 	if not M.ready() then
@@ -205,7 +205,7 @@ local function ready_guard(cb)
 	return true
 end
 
----@param cb simple_pi.PiCallback?
+---@param cb simple_pi.Callback?
 ---@param type "command"|"event"
 ---@param name string
 ---@param data any
@@ -294,7 +294,7 @@ end
 function M.on_connect()
 	local enabled_tools = {}
 
-	---@type simple_pi.PiCallback
+	---@type simple_pi.Callback
 	local cb = function(d)
 		if not d.ok then
 			utils.raise("Failed to init Pi configuration over socket")
@@ -333,7 +333,7 @@ function M.ping(cb)
 	M.send(cb, "command", "ping", {})
 end
 
----@param cb simple_pi.PiCallback?
+---@param cb simple_pi.Callback?
 function M.focus(cb)
 	if not ready_guard(cb) then
 		return
@@ -348,7 +348,7 @@ function M.focus(cb)
 	end
 end
 
----@param cb simple_pi.PiCallback?
+---@param cb simple_pi.Callback?
 function M.close(cb)
 	if not ready_guard(cb) then
 		return
@@ -363,7 +363,7 @@ function M.close(cb)
 	end
 end
 
----@param cb simple_pi.PiCallback?
+---@param cb simple_pi.Callback?
 function M.paste_line_reference(cb)
 	if not ready_guard(cb) then
 		return
@@ -415,7 +415,7 @@ local function get_selection_span(retain_mode)
 	return buf, start_line, end_line
 end
 
----@param cb simple_pi.PiCallback?
+---@param cb simple_pi.Callback?
 ---@param opts { retain_mode: boolean? }?
 function M.paste_range_reference(cb, opts)
 	if not ready_guard(cb) then
@@ -440,7 +440,7 @@ function M.paste_range_reference(cb, opts)
 	})
 end
 
----@param cb simple_pi.PiCallback?
+---@param cb simple_pi.Callback?
 function M.test(cb)
 	if not ready_guard(cb) then
 		return
@@ -449,7 +449,7 @@ function M.test(cb)
 	M.send(cb, "command", "test", {})
 end
 
----@param cb simple_pi.PiCallback?
+---@param cb simple_pi.Callback?
 ---@param opts { retain_mode: boolean? }?
 function M.paste_selection(cb, opts)
 	if not ready_guard(cb) then
@@ -485,7 +485,7 @@ function M.paste_selection(cb, opts)
 	M.send(cb, "command", "append_text", { lines = with_header, as_paragraph = true })
 end
 
----@param cb simple_pi.PiCallback?
+---@param cb simple_pi.Callback?
 function M.paste_qflist(cb)
 	---@type string[]
 	local lines = { "Neovim quickfix list (qflist):" }

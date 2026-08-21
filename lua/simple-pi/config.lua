@@ -9,14 +9,10 @@ local M = {}
 ---@field focus fun(): nil
 ---@field validate fun(): boolean
 
----@class simple_pi.SetQflistToolOpts
----@field enabled boolean
----@field on_update fun()?
-
 ---@class simple_pi.ToolsOpts
 ---@field disable_all boolean
 ---@field nvim_get_qflist { enabled: boolean }
----@field nvim_set_qflist simple_pi.SetQflistToolOpts
+---@field nvim_set_qflist { enabled: boolean, on_update: fun()?}
 ---@field [string] any
 
 ---@class simple_pi.Opts

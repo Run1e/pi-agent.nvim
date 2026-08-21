@@ -14,9 +14,9 @@ import {
 } from "./commands.ts";
 import { findSocket } from "./utils.ts";
 
-export type SendDataFn = (data: WireMessage) => void;
+export type SendDataFn = (data: Message) => void;
 
-export type WireMessage = {
+export type Message = {
   correlation_id: number;
   type: "command" | "event";
   name: string;
@@ -88,7 +88,7 @@ export default function (pi: ExtensionAPI) {
     }
 
     if (!dispatcher) {
-      const sendData: SendDataFn = (data: WireMessage) => {
+      const sendData: SendDataFn = (data: Message) => {
         if (!client || client.destroyed || client.closed) {
           throw new Error("Connection to Neovim closed, unable to send data");
         }
