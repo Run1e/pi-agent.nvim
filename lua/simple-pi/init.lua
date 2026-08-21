@@ -33,7 +33,7 @@ M.handlers = {}
 ---@type table<string, simple_pi.EventListener[]>
 M.listeners = {}
 
----@type table<number, any>
+---@type table<number, uv.uv_timer_t>
 M.timers = {}
 
 ---@type table<number, simple_pi.PiCallback>
@@ -162,8 +162,11 @@ function M.start()
 end
 
 function M.stop()
-	M.server:stop()
+	if M.server ~= nil then
+		M.server:stop()
+	end
 
+	M.server = nil
 	M.session_name = nil
 	M.socket_path = nil
 end
@@ -328,8 +331,8 @@ function M.on_disconnect()
 	end
 end
 
-function M.ping()
-	M.send(nil, "command", "ping", {})
+function M.ping(cb)
+	M.send(cb, "command", "ping", {})
 end
 
 ---@param cb simple_pi.PiCallback?
@@ -349,8 +352,8 @@ end
 
 ---@param cb simple_pi.PiCallback?
 function M.close(cb)
-	if not ready_guard() then
-		return false
+	if not ready_guard(cb) then
+		return
 	end
 
 	local ok, err = pcall(config.get_opts().surface.close)

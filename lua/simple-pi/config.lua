@@ -3,7 +3,7 @@ local utils = require("simple-pi.utils")
 local M = {}
 
 ---@class simple_pi.Surface
----@field setup fun(opts: table?): simple_pi.Surface?
+---@field configure fun(opts: table?): simple_pi.Surface
 ---@field open fun(pi: simple_pi): nil
 ---@field close fun(): nil
 ---@field focus fun(): nil
@@ -81,10 +81,6 @@ function M.setup(opts)
 			M.get_opts().surface = default_surface
 		end
 	end
-end
-
-function M.clear()
-	M._opts = nil
 end
 
 return M

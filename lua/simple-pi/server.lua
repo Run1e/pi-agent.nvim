@@ -17,6 +17,13 @@ Server.__index = Server
 ---@field on_connect fun()?
 ---@field on_disconnect fun()?
 ---@field on_message fun(msg: simple_pi.Message)
+---@field send fun(self: simple_pi.Server, data: table) nil
+---@field close fun(self: simple_pi.Server, inhibit_promote: boolean?, is_stopping: boolean?) nil
+---@field promote_client fun(self: simple_pi.Server, client: uv.uv_pipe_t) nil
+---@field maybe_promote_pending fun(self: simple_pi.Server) nil
+---@field on_accept fun(self: simple_pi.Server) nil
+---@field stop fun(self: simple_pi.Server) nil
+---@field is_active fun(self: simple_pi.Server) boolean
 
 ---@param path string
 ---@param on_connect fun()
@@ -89,8 +96,7 @@ function Server:send(data)
 end
 
 ---@param inhibit_promote boolean?
----@param is_stopping boolean?
-function Server:close(inhibit_promote, is_stopping)
+function Server:close(inhibit_promote)
 	if self.client == nil then
 		return
 	end
@@ -98,12 +104,9 @@ function Server:close(inhibit_promote, is_stopping)
 	self.client:close(function()
 		if self.on_disconnect then
 			vim.schedule(self.on_disconnect)
-			if is_stopping == true then
-				Server.on_disconnect = nil
-			end
 		end
 
-		if inhibit_promote ~= true or is_stopping == true then
+		if inhibit_promote ~= true then
 			self:maybe_promote_pending()
 		end
 	end)
@@ -194,7 +197,7 @@ end
 -- TODO: test this
 function Server:stop()
 	if self.pending_client then
-		Server.pending_client:close()
+		self.pending_client:close()
 	end
 
 	if self.client then
@@ -202,10 +205,9 @@ function Server:stop()
 	end
 
 	if self.pipe then
-		local path = Server.path
 		self.pipe:close(function()
-			if path then
-				os.remove(path)
+			if self.path then
+				os.remove(self.path)
 			end
 		end)
 	end

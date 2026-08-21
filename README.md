@@ -41,10 +41,10 @@ pi.setup({
 })
 ```
 
-You can also further configure the surface by calling `surface.setup`:
+You can also further configure the surface by calling `.configure()`:
 ```lua
 pi.setup({
-    surface = pi.get_surface("nvim").setup({
+    surface = pi.get_surface("nvim").configure({
         open_in = "tab", -- open pi in a new tab instead of a vsplit
         auto_insert_on_focus = true, -- automatically enter insert when navigating to Pi
         -- etc...
