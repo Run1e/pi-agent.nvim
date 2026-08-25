@@ -49,20 +49,14 @@ pi.on_blocking("message_end", function(event)
 end)
 ```
 
-`pi.on_blocking` will let you modify pi behaviour through the return value, though very complicated
-(or security critical) use-cases are often better off as
-an [actual pi extension](https://pi.dev/docs/latest/extensions).
-The input `event` and the return value (in the case of `pi_blocking`) are JSON-serialized
-over the socket.
-
 ### 📎 Passing context
 
-You can add text to your in-progress pi message/prompt in multiple ways:
+You can paste text to your in-progress pi message/prompt in multiple ways:
 
-- `paste_line_reference()`: paste a reference of the current cursor position (`file:linenum`)
-- `paste_range_reference()`: paste the current selection range (`file:startline:endline`)
-- `paste_selection()`: paste current selection contents into pi prompt
-- `paste_qflist()`: paste quickfix list contents into the pi prompt
+- `paste_cursor_reference()` -- paste a reference of the current cursor position (`file:linenum`)
+- `paste_selection_reference()` -- paste the current selection range (`file:startline:endline`)
+- `paste_selection_contents()` -- paste current selection contents into pi prompt
+- `paste_qflist()` -- paste quickfix list contents into the pi prompt
 
 ## Quickstart
 
@@ -109,9 +103,9 @@ Here's a list of recommended defaults to get you started:
 ```lua
 vim.keymap.set("n", "<leader>as", pi.start, { desc = "pi: Start" })
 vim.keymap.set("n", "<leader>ac", pi.close, { desc = "pi: Close" })
-vim.keymap.set({ "n", "x" }, "<leader>al", pi.paste_line_reference, { desc = "pi: Paste line reference" })
-vim.keymap.set({ "n", "x" }, "<leader>ar", pi.paste_range_reference, { desc = "pi: Paste range reference" })
-vim.keymap.set({ "n", "x" }, "<leader>ap", pi.paste_selection, { desc = "pi: Paste selection" })
+vim.keymap.set({ "n", "x" }, "<leader>al", pi.paste_cursor_reference, { desc = "pi: Paste cursor reference" })
+vim.keymap.set({ "n", "x" }, "<leader>ar", pi.paste_selection_reference, { desc = "pi: Paste range reference" })
+vim.keymap.set({ "n", "x" }, "<leader>ap", pi.paste_selection_contents, { desc = "pi: Paste selection contents" })
 ```
 
 ## API Reference
@@ -136,6 +130,13 @@ pi.paste_range_reference(function(result)
 end)
 ```
 
+`pi.on_blocking` will let you modify pi behaviour through the return value, though very complicated
+(or security critical) use-cases are often better off as
+an [actual pi extension](https://pi.dev/docs/latest/extensions).
+The input `event` and the return value (in the case of `pi_blocking`) are JSON-serialized
+over the socket.
+
+
 | Method | Description |
 | ------- | -------- |
 | **get_surface**(name) | Get the Lua surface module |
@@ -143,9 +144,9 @@ end)
 | **on**(name, function(event) ... end) | Listen to any pi event (asynchronously) |
 | **on_blocking**(name, function(event) ... end) | Same as above but sends the return value back to pi to be returned in the real event handler |
 | **focus**(cb) | Focus on the pi instance |
-| **paste_line_reference**(cb) | Paste a line reference (`file:linenum`) into pi prompt |
-| **paste_range_reference**(cb) | Paste a range reference (`file:startline:endline`) of your current selection into pi prompt |
-| **paste_selection**(cb) | Paste the current selection contents into your pi prompt |
+| **paste_cursor_reference**(cb) | Paste a line reference (`file:linenum`) into pi prompt |
+| **paste_selection_reference**(cb) | Paste a range reference (`file:startline:endline`) of your current selection into pi prompt |
+| **paste_selection_contents**(cb) | Paste the current selection contents into your pi prompt |
 | **paste_qflist**(cb) | Paste your quickfix list into pi prompt |
 | **close**(cb) | Close the window/tab pi is running in (will kill pi process unless surface is nvim) |
 | **stop**() | Stop the socket server |
@@ -243,7 +244,7 @@ Surface implementations are just Lua modules, so you can provide your own shaped
 
 ```lua
 vim.keymap.set({ "n", "x" }, "<leader>al", function()
-	pi.paste_line_reference(function(res)
+	pi.paste_cursor_reference(function(res)
 		if res.ok then
 			pi.focus()
 		end

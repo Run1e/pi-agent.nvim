@@ -415,7 +415,7 @@ function Pi.close(cb)
 end
 
 ---@param cb pi_agent.Callback?
-function Pi.paste_line_reference(cb)
+function Pi.paste_cursor_reference(cb)
 	if not ready_guard(cb) then
 		return
 	end
@@ -468,7 +468,7 @@ end
 
 ---@param cb pi_agent.Callback?
 ---@param opts { retain_mode: boolean? }?
-function Pi.paste_range_reference(cb, opts)
+function Pi.paste_selection_reference(cb, opts)
 	if not ready_guard(cb) then
 		return
 	end
@@ -493,7 +493,7 @@ end
 
 ---@param cb pi_agent.Callback?
 ---@param opts { retain_mode: boolean? }?
-function Pi.paste_selection(cb, opts)
+function Pi.paste_selection_contents(cb, opts)
 	if not ready_guard(cb) then
 		return
 	end
