@@ -1,8 +1,8 @@
-# pi-agent.nvim
+# 🤖 `pi-agent.nvim`
 
 Pragmatic integration between Neovim and the [pi agent harness](https://pi.dev/).
 
-## Features
+## ✨ Features
 
 - Open pi inside a Neovim window/tab, or in a new terminal multiplexer tab (tmux/herdr)
 - Send context directly from Neovim; line/range references, selected range, etc
@@ -32,7 +32,8 @@ pi.on("agent_settled", function(event) vim.notify("Agent settled!") end)
 -- .on_blocking *does* block the pi event handler and uses this return value on the pi side
 pi.on_blocking("message_end", function(event)
 	if event.message.role == "user" then
-		event.message.content[1].text = event.message.content[1].text .. " -- btw: hello from pi-agent!"
+		event.message.content[1].text = event.message.content[1].text
+			.. " -- btw: hello from pi-agent.nvim!"
 		return event
 	end
 end)
@@ -118,7 +119,12 @@ pi.paste_range_reference(function(result)
 	if result.ok then
 		vim.notify("Successfully pasted range reference")
 	else
-		vim.notify("Failed pasting range reference, reason: " .. result.reason .. " error: " .. result.error)
+		vim.notify(
+			"Failed pasting range reference, reason: "
+			.. result.reason
+			.. " error: "
+			.. result.error
+		)
 	end
 end)
 
@@ -126,17 +132,17 @@ end)
 
 | Method | Description |
 | ------- | -------- |
-| pi.get_surface(name) | Get a reference to the module that implements the surface |
-| pi.start() | Start pi in the provided surface, or focus if already started |
-| pi.on(name, function(event) ... end) | Listen to any pi event |
-| pi.on_blocking(name, function(event) ... end) | Same as above but sends the return value back to pi to be returned in the real event handler |
-| pi.focus(cb) | Focus on the pi instance |
-| pi.paste_line_reference(cb) | Paste a line reference (`file:linenum`) of your current line into your pi prompt |
-| pi.paste_range_reference(cb) | Paste a range reference (`file:startline:endline`) of your current selection into your pi prompt |
-| pi.paste_selection(cb) | Paste your current selection contents into your pi prompt |
-| pi.paste_qflist(cb) | Paste your quickfix list into your pi prompt |
-| pi.close(cb) | Close the window/tab pi is running in (will kill pi unless surface == "nvim") |
-| pi.stop() | Stop the socket server |
+| **get_surface**(name) | Get a reference to the module that implements the surface |
+| **start**() | Start pi in the provided surface, or focus if already started |
+| **on**(name, function(event) ... end) | Listen to any pi event |
+| **on_blocking**(name, function(event) ... end) | Same as above but sends the return value back to pi to be returned in the real event handler |
+| **focus**(cb) | Focus on the pi instance |
+| **paste_line_reference**(cb) | Paste a line reference (`file:linenum`) of your current line into your pi prompt |
+| *.paste_range_reference**(cb) | Paste a range reference (`file:startline:endline`) of your current selection into your pi prompt |
+| **paste_selection**(cb) | Paste your current selection contents into your pi prompt |
+| **paste_qflist**(cb) | Paste your quickfix list into your pi prompt |
+| *.close**(cb) | Close the window/tab pi is running in (will kill pi unless surface == "nvim") |
+| **stop**() | Stop the socket server |
 
 ### Options reference
 
@@ -223,15 +229,6 @@ vim.keymap.set({ "n", "x" }, "<leader>al", function()
 	end)
 end, { desc = "pi: Paste line reference" })
 
-```
-
-### Notify on agent settled
-
-```lua
-pi.on("agent_settled", function(event)
-	vim.notify("Agent settled")
-	-- wouldn't recommend it but you could pi.focus() here
-end)
 ```
 
 ## Planned
