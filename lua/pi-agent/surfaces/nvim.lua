@@ -11,7 +11,6 @@ local M = {}
 
 ---@type pi_agent.surfaces.nvim.Opts
 M.default_opts = {
-	-- "window" | "tab"
 	open_in = "window",
 	auto_insert_on_focus = true,
 	split = "right",

@@ -110,6 +110,10 @@ function Pi.setup(opts)
 		return
 	end
 
+	-- autoread files if they change
+	-- TODO: should we just force set things like this? hmm
+	vim.opt.autoread = true
+
 	config.setup(opts)
 
 	config.get_opts().surface.setup()
