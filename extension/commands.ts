@@ -78,5 +78,5 @@ export const handleInit: CommandHandler<"init"> = (meta, data) => {
     });
   }
 
-  meta.ctx.ui.notify("Connected to Neovim :D");
+  meta.ctx.ui.notify("[pi-agent] connected to nvim :D");
 };

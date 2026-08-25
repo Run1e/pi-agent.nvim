@@ -9,7 +9,6 @@ export type EventListener<K extends keyof NvimEvents> = (
 export const listenRegisterEventInterest: EventListener<
   "register_event_interest"
 > = (meta, data) => {
-  // don't double-register events bound for nvim
   const ed = meta.dispatcher.eventData;
 
   // register listener if not already
@@ -20,14 +19,20 @@ export const listenRegisterEventInterest: EventListener<
     ) => void;
 
     castedOn(data.event_name, async (event) => {
+      // if dispatcher says we're not game just return immediately
+      if (!meta.dispatcher.isReady()) {
+        return;
+      }
+
       let correlationId = meta.dispatcher.newCorrelationId();
 
-      const sender = () =>
+      const sender = () => {
         meta.dispatcher.sendEvent("pi_event", {
           name: data.event_name,
           correlation_id: correlationId,
           event: event,
         });
+      };
 
       if (ed.blockingListeners.get(data.event_name) ?? false) {
         const p = meta.dispatcher.waitForEvent(
@@ -37,10 +42,20 @@ export const listenRegisterEventInterest: EventListener<
 
         sender();
 
-        const piEventResponse = await p;
+        let piEventResponse: NvimEvents["pi_event_response"];
+        try {
+          piEventResponse = await p;
+        } catch (e) {
+          meta.ctx.ui.notify(
+            `[simple-pi] timed out waiting for blocking result for event '${data.event_name}'`,
+          );
+          return;
+        }
 
         if (piEventResponse.error) {
-          throw new Error(piEventResponse.error);
+          meta.ctx.ui.notify(
+            `[simple-pi] blocking result for event '${data.event_name}' failed: ${piEventResponse.error}`,
+          );
         }
 
         return piEventResponse.result;

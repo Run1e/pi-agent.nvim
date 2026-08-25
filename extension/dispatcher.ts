@@ -5,13 +5,22 @@ import {
 
 import { CommandHandler, PiCommand, PiCommands } from "./commands";
 import { EventListener } from "./events";
-import { SendDataFn } from "./pi-agent";
 import {
   NvimCommandResults,
   NvimCommands,
   NvimEvent,
   NvimEvents,
 } from "./extern";
+import { createConnection, Socket } from "net";
+import { findSocket } from "./utils";
+import { existsSync } from "fs";
+
+export type Message = {
+  correlation_id: number;
+  type: "command" | "event";
+  name: string;
+  data: any;
+};
 
 export type EventData = {
   registeredListeners: Set<string>;
@@ -35,20 +44,124 @@ export class Dispatcher {
     EventListener<keyof NvimEvents>[]
   >();
 
+  private meta: Meta;
   private pi: ExtensionAPI;
   private ctx: ExtensionContext;
-  private sendData: SendDataFn;
+  private client: Socket | null;
+  private socketPath: string;
   private nextId = 100;
+  private reconnectTimer: NodeJS.Timeout | null;
 
   public eventData: EventData = {
     registeredListeners: new Set(),
     blockingListeners: new Map(),
   };
 
-  constructor(pi: ExtensionAPI, ctx: ExtensionContext, sendData: SendDataFn) {
+  constructor(pi: ExtensionAPI, ctx: ExtensionContext) {
     this.pi = pi;
     this.ctx = ctx;
-    this.sendData = sendData;
+
+    this.socketPath = findSocket();
+    this.client = this.createClient();
+
+    this.reconnectTimer = null;
+
+    this.meta = {
+      pi: pi,
+      ctx: ctx,
+      dispatcher: this,
+    };
+  }
+
+  isReady(): boolean {
+    return this.client != null && !this.client.destroyed && !this.client.closed;
+  }
+
+  onDisconnect() {
+    // we've disconnected, remove the client from the instance and use the client
+    // passed into this function when handling reconnect
+    if (this.client == null) {
+      return;
+    }
+
+    this.client = null;
+
+    this.reconnectTimer = setTimeout(() => {
+      this.ctx.ui.notify("[pi-agent] attempting reconnect");
+
+      this.reconnectTimer = null;
+
+      if (!existsSync(this.socketPath)) {
+        this.ctx.ui.notify(
+          "[pi-agent] socket file deleted, not attempting more reconnects",
+        );
+        return;
+      }
+
+      const client = this.createClient();
+      if (client != null && this.client == null) {
+        this.client = client;
+      }
+    }, 500);
+  }
+
+  createClient(): Socket | null {
+    // do nothing if we have a good client
+    if (this.client != null && !this.client.destroyed && !this.client.closed) {
+      return null;
+    }
+
+    const client = createConnection({ path: this.socketPath }, () => {
+      if (this.reconnectTimer != null) {
+        clearTimeout(this.reconnectTimer);
+      }
+    });
+
+    // other side signaled end of transmission
+    client.on("end", () => {
+      this.onDisconnect();
+    });
+
+    // socket fully closed
+    client.on("close", () => {
+      this.onDisconnect();
+    });
+
+    // an error occurred, 'close' will be called directly afterwards
+    client.on("error", (err) => {});
+
+    let buffer = "";
+
+    client.on("data", (chunk: Buffer) => {
+      buffer += chunk.toString("utf8");
+
+      let nl: number;
+      while ((nl = buffer.indexOf("\n")) !== -1) {
+        const line = buffer.slice(0, nl);
+        buffer = buffer.slice(nl + 1);
+        if (line.length > 0) {
+          let msg: unknown;
+          try {
+            msg = JSON.parse(line);
+          } catch (e) {
+            continue;
+          }
+
+          this.dispatch(msg);
+        }
+      }
+    });
+
+    return client;
+  }
+
+  sendData(data: Message) {
+    if (!this.isReady()) {
+      return;
+    }
+
+    // lsp complains but this shouldn't be null because the guard above
+    this.client?.write(JSON.stringify(data) + "\n");
   }
 
   setHandler<K extends keyof PiCommands>(name: K, handler: CommandHandler<K>) {
@@ -79,10 +192,6 @@ export class Dispatcher {
         }
       }
     };
-  }
-
-  getContext(): ExtensionContext {
-    return this.ctx;
   }
 
   newCorrelationId() {
@@ -128,6 +237,10 @@ export class Dispatcher {
     name: K,
     data: NvimCommands[K],
   ): Promise<NvimCommandResults[K]> {
+    if (!this.isReady()) {
+      throw new Error("Not connected to Neovim");
+    }
+
     const correlationId = this.newCorrelationId();
 
     this.sendData({
@@ -151,29 +264,25 @@ export class Dispatcher {
     ]).then((data) => data.value);
   }
 
-  sendEvent(name: string, data: any): number {
-    const correlationId = this.newCorrelationId();
+  sendEvent(name: string, data: any) {
+    if (!this.isReady()) {
+      return;
+    }
 
     // events are fire-and-forget
     this.sendData({
       type: "event",
       name: name,
-      correlation_id: correlationId,
+      correlation_id: this.newCorrelationId(),
       data: data,
     });
-
-    return correlationId;
-  }
-
-  buildMeta(): Meta {
-    return {
-      pi: this.pi,
-      ctx: this.ctx,
-      dispatcher: this,
-    };
   }
 
   async handleCommand<K extends keyof PiCommands>(command: PiCommand<K>) {
+    if (!this.isReady()) {
+      return;
+    }
+
     let value;
 
     try {
@@ -182,7 +291,7 @@ export class Dispatcher {
         throw new Error(`Unknown command: ${command.name}`);
       }
 
-      value = await handler(this.buildMeta(), command.data);
+      value = await handler(this.meta, command.data);
     } catch (e: any) {
       this.sendData({
         type: "event",
@@ -205,15 +314,18 @@ export class Dispatcher {
   }
 
   handleEvent<K extends keyof NvimEvents>(event: NvimEvent<K>) {
+    if (!this.isReady()) {
+      return;
+    }
+
     const listeners = this.listeners.get(event.name) ?? [];
-    const meta = this.buildMeta();
 
     for (const listener of listeners) {
       try {
-        listener(meta, event.data);
+        listener(this.meta, event.data);
       } catch (e: any) {
         this.ctx.ui.notify(
-          `Event listener for event '${event.name}' threw: ${e?.message ?? String(e)}`,
+          `[pi-agent] listener for event '${event.name}' threw: ${e?.message ?? String(e)}`,
         );
         continue;
       }
@@ -240,9 +352,10 @@ export class Dispatcher {
 
   dispatch(msg: unknown) {
     if (this.isCommand(msg)) {
+      // return this.client != null && !this.client.destroyed && !this.client.closed;
       this.handleCommand(msg).catch((e) => {
         this.ctx.ui.notify(
-          `Command handler for command '${msg.name}' threw: ${e?.message ?? String(e)}`,
+          `handler for command '${msg.name}' threw: ${e?.message ?? String(e)}`,
         );
       });
     } else if (this.isEvent(msg)) {

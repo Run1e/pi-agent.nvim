@@ -94,6 +94,8 @@ function Server:close(inhibit_promote)
 	end
 
 	self.client:close(function()
+		self.client = nil
+
 		if self.on_disconnect then
 			vim.schedule(self.on_disconnect)
 		end
