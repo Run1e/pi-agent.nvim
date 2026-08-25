@@ -15,7 +15,7 @@ Pragmatic integration between Neovim and the [pi agent harness](https://pi.dev/)
 ## ✨ Features
 
 - Open pi inside a Neovim window/tab, or in a new terminal multiplexer tab (tmux/herdr)
-- Send context directly from Neovim; line/range references, selected range, etc
+- Send context directly from Neovim; cursor/selection references, selection contents, etc
 - Let your agent read and edit the quickfix list via tools (`nvim_get_qflist`, `nvim_set_qflist`)
 - Trigger Lua functions on [pi events](https://pi.dev/docs/latest/extensions#events): `pi.on("agent_settled", function() ... end)`
 - pi extension bundled with plugin, no extra dependencies, built to be hackable
@@ -28,7 +28,7 @@ Let your agent access and edit the quickfix list.
 
 Try asking:
 - `explain everything in my quickfix list`
-- `review @file and put issues in my qflist`
+- `review last commit and put issues in my qflist`
 - `find all instances of exception swallowing and put them in my qflist`
 
 ### 📡 Listen to events
@@ -53,10 +53,10 @@ end)
 
 You can paste text to your in-progress pi message/prompt in multiple ways:
 
-- `paste_cursor_reference()` -- paste a reference to the current cursor position (`file:linenum`)
-- `paste_selection_reference()` -- paste current selection reference (`file:startline:endline`)
-- `paste_selection_contents()` -- paste current selection contents
-- `paste_qflist()` -- paste quickfix list
+| `paste_cursor_reference()` | paste a reference to the current cursor position (`file:linenum`) |
+| `paste_selection_reference()` | paste current selection reference (`file:startline:endline`) |
+| `paste_selection_contents()` | paste current selection contents |
+| `paste_qflist()` | paste quickfix list |
 
 ## Quickstart
 
