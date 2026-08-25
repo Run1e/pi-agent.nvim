@@ -53,7 +53,7 @@ end)
 
 You can paste text to your in-progress pi message/prompt in multiple ways:
 
-| |  |
+| Method | Description |
 | - | - |
 | `paste_cursor_reference()` | paste a reference to the current cursor position (`file:linenum`) |
 | `paste_selection_reference()` | paste current selection reference (`file:startline:endline`) |
@@ -104,6 +104,7 @@ pi-agent ships with no default keymaps.
 Here's a list of recommended defaults to get you started:
 ```lua
 vim.keymap.set("n", "<leader>as", pi.start, { desc = "pi: Start" })
+vim.keymap.set("n", "<leader>af", pi.focus, { desc = "pi: Focus" })
 vim.keymap.set("n", "<leader>ac", pi.close, { desc = "pi: Close" })
 vim.keymap.set({ "n", "x" }, "<leader>al", pi.paste_cursor_reference, { desc = "pi: Paste cursor reference" })
 vim.keymap.set({ "n", "x" }, "<leader>ar", pi.paste_selection_reference, { desc = "pi: Paste range reference" })
@@ -127,7 +128,7 @@ pi.paste_range_reference(function(result)
 		vim.notify("Successfully pasted range reference, focusing pi")
 		pi.focus()
 	else
-		-- handle failure somehow if needed
+		-- handle failure if needed
 	end
 end)
 ```
@@ -266,6 +267,14 @@ pi.setup({
 		},
 	},
 })
+```
+
+### Sending arbitrary text to pi
+
+Part of the internal API, subject to change.
+
+```lua
+pi.send(cb or nil, "command", "append_text", { lines = { "list", "of", "lines" }, as_paragraph = false})
 ```
 
 ## Planned
