@@ -86,7 +86,9 @@ require("pi-agent").setup()
 ### Set up your surface
 
 pi-agent supports three "surfaces" (where your pi instance runs) out of the box:
-`nvim`, `herdr`, and `tmux`. If omitted it defaults to opening pi in a Neovim vsplit.
+`nvim`, `herdr`, and `tmux`.
+
+If omitted it defaults to opening pi in a Neovim vsplit.
 
 To set a specific surface, for example [herdr](https://herdr.dev/):
 ```lua
