@@ -111,6 +111,8 @@ vim.keymap.set({ "n", "x" }, "<leader>ar", pi.paste_selection_reference, { desc 
 vim.keymap.set({ "n", "x" }, "<leader>ap", pi.paste_selection_contents, { desc = "pi: Paste selection contents" })
 ```
 
+See [Methods](#methods) for other functionality you can map.
+
 ## API Reference
 
 ### Methods
