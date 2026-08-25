@@ -193,7 +193,7 @@ end
 ---@return boolean
 local function ready_guard(cb)
 	if not Pi.ready() then
-		Pi.invoke_cb(cb, "error", "Not connected to Pi, run require('pi-agent').start()")
+		Pi.invoke_cb(cb, "error", "Not connected to pi, run require('pi-agent').start()")
 		return false
 	end
 
@@ -210,7 +210,7 @@ function Pi.send(cb, type, name, data)
 	end
 
 	if type == "event" and cb ~= nil then
-		utils.raise("events should not provide callbacks")
+		utils.raise("Events should not provide callbacks")
 	end
 
 	local timer
@@ -337,10 +337,10 @@ function Pi.on_connect()
 	---@type pi_agent.Callback
 	local cb = function(d)
 		if not d.ok then
-			utils.raise("Failed to init Pi configuration over socket")
+			utils.raise("Failed to init pi configuration over socket")
 		end
 
-		utils.info("Connected to Pi :D")
+		utils.info("Connected to pi :D")
 	end
 
 	local tools = config.get_opts().tools
@@ -367,7 +367,7 @@ function Pi.on_connect()
 end
 
 function Pi.on_disconnect()
-	utils.info("Pi disconnected D:")
+	utils.info("pi disconnected D:")
 
 	local opts = config.get_opts()
 

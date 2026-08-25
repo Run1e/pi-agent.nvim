@@ -88,7 +88,7 @@ function M.open(pi)
 
 	local ok2, err = pcall(tmux_run, { "send-keys", "-t", M.pane_id, cmd_str, "Enter" })
 	if not ok2 then
-		utils.raise("Failed to launch Pi in tmux: " .. err)
+		utils.raise("Failed to launch pi in tmux: " .. err)
 	end
 end
 
@@ -125,7 +125,7 @@ function M.validate()
 	end
 
 	if vim.env.TMUX == nil or vim.env.TMUX == "" then
-		utils.raise("nvim is not running inside tmux")
+		utils.raise("Neovim is not running inside tmux")
 	end
 end
 

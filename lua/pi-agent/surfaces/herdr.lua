@@ -104,7 +104,7 @@ function M.open(pi)
 
 	data = herdr_run(cmd)
 	if data.error then
-		utils.raise("Failed to launch Pi in herdr: " .. data.error.message)
+		utils.raise("Failed to launch pi in herdr: " .. data.error.message)
 	end
 end
 
@@ -145,7 +145,7 @@ function M.validate()
 	end
 
 	if vim.env.HERDR_ENV == nil or vim.env.HERDR_ENV == "" then
-		utils.raise("nvim is not running inside herdr")
+		utils.raise("Neovim is not running inside herdr")
 	end
 end
 

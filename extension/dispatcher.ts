@@ -93,13 +93,13 @@ export class Dispatcher {
     this.client = null;
 
     this.reconnectTimer = setTimeout(() => {
-      this.ctx.ui.notify("[pi-agent] attempting reconnect");
+      this.ctx.ui.notify("[pi-agent] Attempting reconnect");
 
       this.reconnectTimer = null;
 
       if (!existsSync(this.socketPath)) {
         this.ctx.ui.notify(
-          "[pi-agent] socket file deleted, not attempting more reconnects",
+          "[pi-agent] Socket file deleted, not attempting more reconnects",
         );
         return;
       }
@@ -138,7 +138,7 @@ export class Dispatcher {
     // an error occurred, 'close' will be called directly afterwards
     client.on("error", (err) => {
       this.ctx.ui.notify(
-        `[pi-agent] socket error: ${err?.message ?? String(err)}`,
+        `[pi-agent] Socket error: ${err?.message ?? String(err)}`,
       );
     });
 
@@ -337,7 +337,7 @@ export class Dispatcher {
         listener(this, event.data);
       } catch (e: any) {
         this.ctx.ui.notify(
-          `[pi-agent] listener for event '${event.name}' threw: ${e?.message ?? String(e)}`,
+          `[pi-agent] Listener for event '${event.name}' threw: ${e?.message ?? String(e)}`,
         );
         continue;
       }
@@ -366,7 +366,7 @@ export class Dispatcher {
     if (this.isCommand(msg)) {
       this.handleCommand(msg).catch((e) => {
         this.ctx.ui.notify(
-          `handler for command '${msg.name}' threw: ${e?.message ?? String(e)}`,
+          `Handler for command '${msg.name}' threw: ${e?.message ?? String(e)}`,
         );
       });
     } else if (this.isEvent(msg)) {

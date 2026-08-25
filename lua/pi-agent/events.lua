@@ -4,7 +4,7 @@ local M = {}
 
 ---@param data any
 function M.pong(pi, data)
-	utils.info("pong!!!!")
+	utils.info("Pong!")
 end
 
 ---@param data pi_agent.CommandSuccessData
@@ -19,7 +19,7 @@ function M.on_command_failure(pi, data)
 	local cb = pi.callbacks[data.correlation_id]
 	pi.clear_correlation(data.correlation_id)
 	local error_str = (data.error and #data.error) and data.error or "no error"
-	pi.invoke_cb(cb, "command_failure", "Pi extension exception with error: " .. error_str)
+	pi.invoke_cb(cb, "command_failure", "pi extension exception with error: " .. error_str)
 end
 
 function M.pi_event(pi, event)
@@ -29,7 +29,7 @@ function M.pi_event(pi, event)
 	for _, listener in ipairs(non_blocking_listeners) do
 		local ok, err = pcall(listener, event.event)
 		if not ok then
-			utils.error(string.format("non-blocking pi listener for '%s' failed with error: %s", event.name, err))
+			utils.error(string.format("Non-blocking pi listener for '%s' failed with error: %s", event.name, err))
 		end
 	end
 
@@ -37,7 +37,7 @@ function M.pi_event(pi, event)
 		local ok, result = pcall(blocking_listener, event.event)
 		if not ok then
 			utils.error(
-				string.format("blocking pi listener for '%s' failed with error: %s", event.name, tostring(result))
+				string.format("Blocking pi listener for '%s' failed with error: %s", event.name, tostring(result))
 			)
 			pi.send(
 				nil,

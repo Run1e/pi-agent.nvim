@@ -47,14 +47,14 @@ export const listenRegisterEventInterest: EventListener<
           piEventResponse = await p;
         } catch (e) {
           dispatcher.ctx.ui.notify(
-            `[pi-agent] timed out waiting for blocking result for event '${data.event_name}'`,
+            `[pi-agent] Timed out waiting for blocking result for event '${data.event_name}'`,
           );
           return;
         }
 
         if (piEventResponse.error) {
           dispatcher.ctx.ui.notify(
-            `[pi-agent] blocking result for event '${data.event_name}' failed: ${piEventResponse.error}`,
+            `[pi-agent] Blocking result for event '${data.event_name}' failed: ${piEventResponse.error}`,
           );
         }
 

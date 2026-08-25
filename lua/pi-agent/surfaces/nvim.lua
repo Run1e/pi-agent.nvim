@@ -91,7 +91,7 @@ local function start_term()
 	)
 
 	if result < 1 then
-		utils.raise("Failed to jobstart Pi in Nvim surface")
+		utils.raise("Failed to jobstart pi in Nvim surface")
 	end
 
 	if M.buf_id == nil then

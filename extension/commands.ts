@@ -38,7 +38,7 @@ export const handleInit: CommandHandler<"init"> = (dispatcher, data) => {
     });
   }
 
-  dispatcher.ctx.ui.notify("[pi-agent] connected to nvim :D");
+  dispatcher.ctx.ui.notify("[pi-agent] Connected to Neovim :D");
 };
 
 export const handlePing: CommandHandler<"ping"> = (dispatcher, data) => {
@@ -81,5 +81,5 @@ export const handleAppendText: CommandHandler<"append_text"> = (
 
   // I don't really like this,
   // but it forces a repaint which doesn't happen with setEditorText for some reason.
-  dispatcher.ctx.ui.notify("[pi-agent] text appended to prompt");
+  dispatcher.ctx.ui.notify("[pi-agent] Text appended");
 };
