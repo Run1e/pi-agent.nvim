@@ -53,6 +53,8 @@ end)
 
 You can paste text to your in-progress pi message/prompt in multiple ways:
 
+| |  |
+| - | - |
 | `paste_cursor_reference()` | paste a reference to the current cursor position (`file:linenum`) |
 | `paste_selection_reference()` | paste current selection reference (`file:startline:endline`) |
 | `paste_selection_contents()` | paste current selection contents |
