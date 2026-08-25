@@ -21,7 +21,7 @@ Try asking:
 - `review @file and put issues in my qflist`
 - `find all instances of exception swallowing and put them in my qflist`
 
-### Listen to events
+### 📡 Listen to events
 
 Listen to arbitrary [pi events](https://pi.dev/docs/latest/extensions#events) in Neovim:
 
@@ -45,7 +45,7 @@ an [actual pi extension](https://pi.dev/docs/latest/extensions).
 The input `event` and the return value (in the case of `pi_blocking`) are JSON-serialized
 over the socket.
 
-### Passing context
+### 📎 Passing context
 
 You can add text to your in-progress pi message/prompt in multiple ways:
 
