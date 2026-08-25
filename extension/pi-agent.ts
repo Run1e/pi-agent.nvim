@@ -1,9 +1,9 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
-import { Dispatcher } from "./dispatcher.ts";
+import { Dispatcher } from "./dispatcher";
 
-import { handleAppendText, handleInit, handlePing } from "./commands.ts";
-import { listenRegisterEventInterest } from "./events.ts";
+import { handleAppendText, handleInit, handlePing } from "./commands";
+import { listenRegisterEventInterest } from "./events";
 
 let dispatcher: Dispatcher | null = null;
 
@@ -21,14 +21,12 @@ export default function (pi: ExtensionAPI) {
         "register_event_interest",
         listenRegisterEventInterest,
       );
+    } else {
+      dispatcher.updateContext(ctx);
     }
   });
 
   pi.on("session_shutdown", async (event, ctx) => {
     if (event.reason === "quit") return;
-
-    // if (dispatcher) {
-    //   dispatcher.destroy();
-    // }
   });
 }

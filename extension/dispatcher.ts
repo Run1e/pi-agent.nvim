@@ -15,7 +15,7 @@ import { createConnection, Socket } from "net";
 import { findSocket } from "./utils";
 import { existsSync } from "fs";
 
-export type Message = {
+type Message = {
   correlation_id: number;
   type: "command" | "event";
   name: string;
@@ -62,7 +62,7 @@ export class Dispatcher {
     this.ctx = ctx;
 
     this.socketPath = findSocket();
-    this.client = this.createClient();
+    this.client = this.ensureClient();
 
     this.reconnectTimer = null;
 
@@ -71,6 +71,11 @@ export class Dispatcher {
       ctx: ctx,
       dispatcher: this,
     };
+  }
+
+  updateContext(ctx: ExtensionContext) {
+    this.ctx = ctx;
+    this.meta.ctx = ctx;
   }
 
   isReady(): boolean {
@@ -84,6 +89,7 @@ export class Dispatcher {
       return;
     }
 
+    this.client.destroy();
     this.client = null;
 
     this.reconnectTimer = setTimeout(() => {
@@ -98,16 +104,16 @@ export class Dispatcher {
         return;
       }
 
-      const client = this.createClient();
+      const client = this.ensureClient();
       if (client != null && this.client == null) {
         this.client = client;
       }
     }, 500);
   }
 
-  createClient(): Socket | null {
+  ensureClient(): Socket | null {
     // do nothing if we have a good client
-    if (this.client != null && !this.client.destroyed && !this.client.closed) {
+    if (this.isReady()) {
       return null;
     }
 
@@ -119,16 +125,24 @@ export class Dispatcher {
 
     // other side signaled end of transmission
     client.on("end", () => {
-      this.onDisconnect();
+      if (this.client == client) {
+        this.onDisconnect();
+      }
     });
 
     // socket fully closed
     client.on("close", () => {
-      this.onDisconnect();
+      if (this.client == client) {
+        this.onDisconnect();
+      }
     });
 
     // an error occurred, 'close' will be called directly afterwards
-    client.on("error", (err) => {});
+    client.on("error", (err) => {
+      this.ctx.ui.notify(
+        `[pi-agent] socket error: ${err?.message ?? String(err)}`,
+      );
+    });
 
     let buffer = "";
 
@@ -352,7 +366,6 @@ export class Dispatcher {
 
   dispatch(msg: unknown) {
     if (this.isCommand(msg)) {
-      // return this.client != null && !this.client.destroyed && !this.client.closed;
       this.handleCommand(msg).catch((e) => {
         this.ctx.ui.notify(
           `handler for command '${msg.name}' threw: ${e?.message ?? String(e)}`,

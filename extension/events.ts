@@ -24,7 +24,7 @@ export const listenRegisterEventInterest: EventListener<
         return;
       }
 
-      let correlationId = meta.dispatcher.newCorrelationId();
+      const correlationId = meta.dispatcher.newCorrelationId();
 
       const sender = () => {
         meta.dispatcher.sendEvent("pi_event", {
@@ -47,14 +47,14 @@ export const listenRegisterEventInterest: EventListener<
           piEventResponse = await p;
         } catch (e) {
           meta.ctx.ui.notify(
-            `[simple-pi] timed out waiting for blocking result for event '${data.event_name}'`,
+            `[pi-agent] timed out waiting for blocking result for event '${data.event_name}'`,
           );
           return;
         }
 
         if (piEventResponse.error) {
           meta.ctx.ui.notify(
-            `[simple-pi] blocking result for event '${data.event_name}' failed: ${piEventResponse.error}`,
+            `[pi-agent] blocking result for event '${data.event_name}' failed: ${piEventResponse.error}`,
           );
         }
 

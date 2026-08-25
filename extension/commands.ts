@@ -21,6 +21,30 @@ export type CommandHandler<K extends keyof PiCommands> = (
   data: PiCommands[K],
 ) => any;
 
+export const handleInit: CommandHandler<"init"> = (meta, data) => {
+  registerTools(meta.pi, meta.dispatcher, data.enabled_tools);
+
+  for (const event_name of data.events) {
+    listenRegisterEventInterest(meta, {
+      event_name: event_name,
+      blocking: false,
+    });
+  }
+
+  for (const event_name of data.events_blocking) {
+    listenRegisterEventInterest(meta, {
+      event_name: event_name,
+      blocking: true,
+    });
+  }
+
+  meta.ctx.ui.notify("[pi-agent] connected to nvim :D");
+};
+
+export const handlePing: CommandHandler<"ping"> = (meta, data) => {
+  meta.dispatcher.sendEvent("pong", {});
+};
+
 export const handleAppendText: CommandHandler<"append_text"> = (meta, data) => {
   // TODO: possible to insert where the users' cursor is?
   // there's "pasteToEditor" but that doesn't let us do spacing particularly well...
@@ -55,28 +79,4 @@ export const handleAppendText: CommandHandler<"append_text"> = (meta, data) => {
   // I don't really like this,
   // but it forces a repaint which doesn't happen with setEditorText for some reason.
   meta.ctx.ui.notify("[pi-agent] text appended to prompt");
-};
-
-export const handlePing: CommandHandler<"ping"> = (meta, data) => {
-  meta.dispatcher.sendEvent("pong", {});
-};
-
-export const handleInit: CommandHandler<"init"> = (meta, data) => {
-  registerTools(meta.pi, meta.dispatcher, data.enabled_tools);
-
-  for (const event_name of data.events) {
-    listenRegisterEventInterest(meta, {
-      event_name: event_name,
-      blocking: false,
-    });
-  }
-
-  for (const event_name of data.events_blocking) {
-    listenRegisterEventInterest(meta, {
-      event_name: event_name,
-      blocking: true,
-    });
-  }
-
-  meta.ctx.ui.notify("[pi-agent] connected to nvim :D");
 };
