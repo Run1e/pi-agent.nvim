@@ -35,7 +35,7 @@ M.default_opts = {
 	pi_bin = "pi",
 
 	focus_on_open = true,
-	close_on_disconnect = true,
+	close_on_disconnect = false,
 
 	tools = {
 		disable_all = false,

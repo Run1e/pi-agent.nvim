@@ -87,19 +87,7 @@ pi.setup({
 })
 ```
 
-You can also configure the surface by calling `.configure()`.
-Here we make pi open in a new Neovim tab instead of a vsplit:
-```lua
-pi.setup({
-    surface = pi.get_surface("nvim").configure({
-        open_in = "tab", -- open pi in a new tab instead of a vsplit
-        auto_insert_on_focus = true, -- automatically enter insert mode when navigating to pi
-        -- etc...
-    })
-})
-```
-
-Surface implementations are just Lua modules, so you can provide your own shaped like `pi_agent.Surface`.
+All surfaces have their on options you can configure, see [surface options](#surface-options)
 
 ### Keymaps
 
@@ -116,7 +104,7 @@ vim.keymap.set({ "n", "x" }, "<leader>ap", pi.paste_selection, { desc = "pi: Pas
 
 ## Interface and options reference
 
-### API reference
+## API reference
 
 Some methods take a callback as an optional `cb` parameter that is called on success, failure, and timeout:
 
@@ -151,13 +139,11 @@ end)
 | **close**(cb) | Close the window/tab pi is running in (will kill pi process unless surface is nvim) |
 | **stop**() | Stop the socket server |
 
-### Options reference
-
-#### Default plugin options
+## Plugin options
 
 ```lua
 require("pi-agent").setup({
-	-- this will be forced to be the nvim surface if passed in as nil
+	-- defaults to nvim surface if nil
 	surface = nil, 
 
 	-- set a custom pi binary path
@@ -167,7 +153,7 @@ require("pi-agent").setup({
 	focus_on_open = true,
 
 	-- whether to close the pi window/tab on disconnect
-	close_on_disconnect = true,
+	close_on_disconnect = false,
 
 	-- tools configuration
 	tools = {
@@ -187,7 +173,24 @@ require("pi-agent").setup({
 })
 ```
 
-#### nvim surface options
+## Surface options
+
+You can configure surfaces by calling `.configure()` on them, which also returns the module itself for convenience.
+
+Here we make pi open in a new Neovim tab instead of a vsplit, and automatically enter insert on focus:
+```lua
+pi.setup({
+    surface = pi.get_surface("nvim").configure({
+        open_in = "tab", -- open pi in a new tab instead of a vsplit
+        auto_insert_on_focus = true, -- automatically enter insert mode when navigating to pi
+        -- etc...
+    })
+})
+```
+
+Surface implementations are just Lua modules, so you can provide your own shaped like `pi_agent.Surface`.
+
+### nvim surface options
 
 ```lua
 {
@@ -205,7 +208,7 @@ require("pi-agent").setup({
 }
 ```
 
-#### herdr surface options
+### herdr surface options
 
 ```lua
 {
@@ -214,7 +217,7 @@ require("pi-agent").setup({
 }
 ```
 
-#### tmux surface options
+### tmux surface options
 
 ```lua
 {
@@ -235,7 +238,20 @@ vim.keymap.set({ "n", "x" }, "<leader>al", function()
 		end
 	end)
 end, { desc = "pi: Paste line reference" })
+```
 
+### Open/close quickfix list on populate/clear
+
+```lua
+pi.setup({
+	tools = {
+		nvim_set_qflist = {
+			on_update = function()
+				vim.cmd(#vim.fn.getqflist() ~= 0 and "copen" or "cclose")
+			end,
+		},
+	},
+})
 ```
 
 ## Planned
