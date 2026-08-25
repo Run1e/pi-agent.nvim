@@ -2,6 +2,15 @@
 
 Pragmatic integration between Neovim and the [pi agent harness](https://pi.dev/).
 
+- [Quickstart](#quickstart)
+    - [Install](#install)
+    - [Set up your surface](#set-up-your-surface)
+    - [Keymaps](#keymaps)
+- [API reference](#api-reference)
+- [Plugin options](#plugin-options)
+- [Surface options](#surface-options)
+- [Recipies](#recipies)
+
 ## ✨ Features
 
 - Open pi inside a Neovim window/tab, or in a new terminal multiplexer tab (tmux/herdr)
@@ -102,9 +111,7 @@ vim.keymap.set({ "n", "x" }, "<leader>ar", pi.paste_range_reference, { desc = "p
 vim.keymap.set({ "n", "x" }, "<leader>ap", pi.paste_selection, { desc = "pi: Paste selection" })
 ```
 
-## Interface and options reference
-
-## API reference
+## API Reference
 
 Some methods take a callback as an optional `cb` parameter that is called on success, failure, and timeout:
 
