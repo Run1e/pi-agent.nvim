@@ -8,7 +8,7 @@ Pragmatic integration between Neovim and the [pi agent harness](https://pi.dev/)
     - [Keymaps](#keymaps)
 - [API reference](#api-reference)
     - [Methods](#methods)
-    - [Plugin options](#plugin-options)
+    - [Setup options](#setup-options)
     - [Surface options](#surface-options)
 - [Recipies](#recipies)
 
@@ -53,10 +53,10 @@ end)
 
 You can paste text to your in-progress pi message/prompt in multiple ways:
 
-- `paste_cursor_reference()` -- paste a reference of the current cursor position (`file:linenum`)
-- `paste_selection_reference()` -- paste the current selection range (`file:startline:endline`)
-- `paste_selection_contents()` -- paste current selection contents into pi prompt
-- `paste_qflist()` -- paste quickfix list contents into the pi prompt
+- `paste_cursor_reference()` -- paste a reference to the current cursor position (`file:linenum`)
+- `paste_selection_reference()` -- paste current selection reference (`file:startline:endline`)
+- `paste_selection_contents()` -- paste current selection contents
+- `paste_qflist()` -- paste quickfix list
 
 ## Quickstart
 
@@ -151,7 +151,7 @@ over the socket.
 | **close**(cb) | Close the window/tab pi is running in (will kill pi process unless surface is nvim) |
 | **stop**() | Stop the socket server |
 
-### Plugin options
+### Setup options
 
 ```lua
 require("pi-agent").setup({
