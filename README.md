@@ -7,6 +7,7 @@ Pragmatic integration between Neovim and the [pi agent harness](https://pi.dev/)
     - [Set up your surface](#set-up-your-surface)
     - [Keymaps](#keymaps)
 - [API reference](#api-reference)
+    - [Methods](#methods)
     - [Plugin options](#plugin-options)
     - [Surface options](#surface-options)
 - [Recipies](#recipies)
@@ -115,6 +116,8 @@ vim.keymap.set({ "n", "x" }, "<leader>ap", pi.paste_selection, { desc = "pi: Pas
 
 ## API Reference
 
+### Methods
+
 Some methods take a callback as an optional `cb` parameter that is called on success, failure, and timeout:
 
 ```lua
@@ -131,7 +134,6 @@ pi.paste_range_reference(function(result)
 		-- handle failure somehow if needed
 	end
 end)
-
 ```
 
 | Method | Description |
