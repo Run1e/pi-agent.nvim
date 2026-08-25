@@ -47,12 +47,12 @@ over the socket.
 
 ### Passing context
 
-Pass context to tell your agent what you're looking at in multiple ways:
+You can add text to your in-progress pi message/prompt in multiple ways:
 
-- `pi.paste_line_reference()`: append what line your cursor is on into the pi prompt (in the form of `file:linenum`)
-- `pi.paste_range_reference()`: append the current selection range (in the form of `file:startline:endline`)
-- `pi.paste_selection()`: pastes the contents of the current selection directly into the pi prompt
-- `pi.paste_qflist()`: paste quickfix list contents into the pi prompt
+- `paste_line_reference()`: paste a reference of the current cursor position (`file:linenum`)
+- `paste_range_reference()`: paste the current selection range (`file:startline:endline`)
+- `paste_selection()`: paste current selection contents into pi prompt
+- `paste_qflist()`: paste quickfix list contents into the pi prompt
 
 ## Quickstart
 
@@ -76,7 +76,8 @@ require("pi-agent").setup()
 
 ### Set up your surface
 
-pi-agent supports three "surfaces" (where your pi instance runs) out of the box: `nvim`, `herdr`, and `tmux`.
+pi-agent supports three "surfaces" (where your pi instance runs) out of the box:
+`nvim`, `herdr`, and `tmux`. If omitted it defaults to opening pi in a Neovim vsplit.
 
 To set a specific surface, for example [herdr](https://herdr.dev/):
 ```lua
@@ -86,7 +87,8 @@ pi.setup({
 })
 ```
 
-You can also configure the surface by calling `.configure()`. Here we make pi open in a tab instead of a vsplit:
+You can also configure the surface by calling `.configure()`.
+Here we make pi open in a new Neovim tab instead of a vsplit:
 ```lua
 pi.setup({
     surface = pi.get_surface("nvim").configure({
@@ -129,12 +131,7 @@ pi.paste_range_reference(function(result)
 		vim.notify("Successfully pasted range reference, focusing pi")
 		pi.focus()
 	else
-		vim.notify(
-			"Failed pasting range reference, reason: "
-			.. result.reason
-			.. " error: "
-			.. result.error
-		)
+		-- handle failure somehow if needed
 	end
 end)
 
