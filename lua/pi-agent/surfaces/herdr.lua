@@ -143,6 +143,10 @@ function M.validate()
 	if not vim.fn.executable(M.opts.herdr_bin) then
 		utils.raise(string.format("'%s' is not executable", M.opts.herdr_bin))
 	end
+
+	if vim.env.HERDR_ENV == nil or vim.env.HERDR_ENV == "" then
+		utils.raise("nvim is not running inside herdr")
+	end
 end
 
 return M
