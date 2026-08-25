@@ -7,8 +7,8 @@ Pragmatic integration between Neovim and the [pi agent harness](https://pi.dev/)
     - [Set up your surface](#set-up-your-surface)
     - [Keymaps](#keymaps)
 - [API reference](#api-reference)
-- [Plugin options](#plugin-options)
-- [Surface options](#surface-options)
+    - [Plugin options](#plugin-options)
+    - [Surface options](#surface-options)
 - [Recipies](#recipies)
 
 ## ✨ Features
@@ -148,7 +148,7 @@ end)
 | **close**(cb) | Close the window/tab pi is running in (will kill pi process unless surface is nvim) |
 | **stop**() | Stop the socket server |
 
-## Plugin options
+### Plugin options
 
 ```lua
 require("pi-agent").setup({
@@ -182,7 +182,7 @@ require("pi-agent").setup({
 })
 ```
 
-## Surface options
+### Surface options
 
 You can configure surfaces by calling `.configure()` on them, which also returns the module itself for convenience.
 
@@ -199,7 +199,7 @@ pi.setup({
 
 Surface implementations are just Lua modules, so you can provide your own shaped like `pi_agent.Surface`.
 
-### nvim surface options
+#### nvim surface options
 
 ```lua
 {
@@ -217,7 +217,7 @@ Surface implementations are just Lua modules, so you can provide your own shaped
 }
 ```
 
-### herdr surface options
+#### herdr surface options
 
 ```lua
 {
@@ -226,7 +226,7 @@ Surface implementations are just Lua modules, so you can provide your own shaped
 }
 ```
 
-### tmux surface options
+#### tmux surface options
 
 ```lua
 {
