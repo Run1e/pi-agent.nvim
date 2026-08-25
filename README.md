@@ -10,7 +10,7 @@ Pragmatic integration between Neovim and the [pi agent harness](https://pi.dev/)
 - Trigger Lua functions on [pi events](https://pi.dev/docs/latest/extensions#events): `pi.on("agent_settled", function() ... end)`
 - pi extension bundled with plugin, no extra dependencies, built to be hackable
 
-### Tools
+### 🔧 Tools
 
 #### `nvim_get_qflist` / `nvim_set_qflist`
 
@@ -45,6 +45,15 @@ an [actual pi extension](https://pi.dev/docs/latest/extensions).
 The input `event` and the return value (in the case of `pi_blocking`) are JSON-serialized
 over the socket.
 
+### Passing context
+
+Pass context to tell your agent what you're looking at in multiple ways:
+
+- `pi.paste_line_reference()`: append what line your cursor is on into the pi prompt (in the form of `file:linenum`)
+- `pi.paste_range_reference()`: append the current selection range (in the form of `file:startline:endline`)
+- `pi.paste_selection()`: pastes the contents of the current selection directly into the pi prompt
+- `pi.paste_qflist()`: paste quickfix list contents into the pi prompt
+
 ## Quickstart
 
 ### Install
@@ -67,9 +76,9 @@ require("pi-agent").setup()
 
 ### Set up your surface
 
-pi-agent supports three "surfaces" out of the box: `nvim`, `herdr`, and `tmux`.
+pi-agent supports three "surfaces" (where your pi instance runs) out of the box: `nvim`, `herdr`, and `tmux`.
 
-To set a specific surface:
+To set a specific surface, for example [herdr](https://herdr.dev/):
 ```lua
 local pi = require("pi-agent")
 pi.setup({
@@ -77,7 +86,7 @@ pi.setup({
 })
 ```
 
-You can also further configure the surface by calling `.configure()`:
+You can also configure the surface by calling `.configure()`. Here we make pi open in a tab instead of a vsplit:
 ```lua
 pi.setup({
     surface = pi.get_surface("nvim").configure({
@@ -88,7 +97,7 @@ pi.setup({
 })
 ```
 
-Surface implementations are just Lua modules, so you can provide your own (see below).
+Surface implementations are just Lua modules, so you can provide your own shaped like `pi_agent.Surface`.
 
 ### Keymaps
 
@@ -117,7 +126,8 @@ pi.paste_range_reference(function(result)
 	---@field value any?
 
 	if result.ok then
-		vim.notify("Successfully pasted range reference")
+		vim.notify("Successfully pasted range reference, focusing pi")
+		pi.focus()
 	else
 		vim.notify(
 			"Failed pasting range reference, reason: "
@@ -132,16 +142,16 @@ end)
 
 | Method | Description |
 | ------- | -------- |
-| **get_surface**(name) | Get a reference to the module that implements the surface |
-| **start**() | Start pi in the provided surface, or focus if already started |
-| **on**(name, function(event) ... end) | Listen to any pi event |
+| **get_surface**(name) | Get the Lua surface module |
+| **start**() | Start pi, or focus if already started |
+| **on**(name, function(event) ... end) | Listen to any pi event (asynchronously) |
 | **on_blocking**(name, function(event) ... end) | Same as above but sends the return value back to pi to be returned in the real event handler |
 | **focus**(cb) | Focus on the pi instance |
-| **paste_line_reference**(cb) | Paste a line reference (`file:linenum`) of your current line into your pi prompt |
-| *.paste_range_reference**(cb) | Paste a range reference (`file:startline:endline`) of your current selection into your pi prompt |
-| **paste_selection**(cb) | Paste your current selection contents into your pi prompt |
-| **paste_qflist**(cb) | Paste your quickfix list into your pi prompt |
-| *.close**(cb) | Close the window/tab pi is running in (will kill pi unless surface == "nvim") |
+| **paste_line_reference**(cb) | Paste a line reference (`file:linenum`) into pi prompt |
+| **paste_range_reference**(cb) | Paste a range reference (`file:startline:endline`) of your current selection into pi prompt |
+| **paste_selection**(cb) | Paste the current selection contents into your pi prompt |
+| **paste_qflist**(cb) | Paste your quickfix list into pi prompt |
+| **close**(cb) | Close the window/tab pi is running in (will kill pi process unless surface is nvim) |
 | **stop**() | Stop the socket server |
 
 ### Options reference
@@ -236,4 +246,5 @@ end, { desc = "pi: Paste line reference" })
 - LSP tools (`nvim_get_diagnostics`)
 - Compose pi messages in a Neovim scratch buffer
 - Support for more surfaces like cmux and zellij
+- I did experiment with tools for marks/registers but they proved to be relatively useless?
 
