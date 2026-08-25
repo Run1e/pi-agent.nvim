@@ -27,12 +27,6 @@ export type EventData = {
   blockingListeners: Map<string, boolean>;
 };
 
-export type Meta = {
-  pi: ExtensionAPI;
-  ctx: ExtensionContext;
-  dispatcher: Dispatcher;
-};
-
 export class Dispatcher {
   private handlers = new Map<
     keyof PiCommands,
@@ -44,9 +38,8 @@ export class Dispatcher {
     EventListener<keyof NvimEvents>[]
   >();
 
-  private meta: Meta;
-  private pi: ExtensionAPI;
-  private ctx: ExtensionContext;
+  public pi: ExtensionAPI;
+  public ctx: ExtensionContext;
   private client: Socket | null;
   private socketPath: string;
   private nextId = 100;
@@ -65,17 +58,10 @@ export class Dispatcher {
     this.client = this.ensureClient();
 
     this.reconnectTimer = null;
-
-    this.meta = {
-      pi: pi,
-      ctx: ctx,
-      dispatcher: this,
-    };
   }
 
   updateContext(ctx: ExtensionContext) {
     this.ctx = ctx;
-    this.meta.ctx = ctx;
   }
 
   isReady(): boolean {
@@ -305,7 +291,7 @@ export class Dispatcher {
         throw new Error(`Unknown command: ${command.name}`);
       }
 
-      value = await handler(this.meta, command.data);
+      value = await handler(this, command.data);
     } catch (e: any) {
       this.sendData({
         type: "event",
@@ -336,7 +322,7 @@ export class Dispatcher {
 
     for (const listener of listeners) {
       try {
-        listener(this.meta, event.data);
+        listener(this, event.data);
       } catch (e: any) {
         this.ctx.ui.notify(
           `[pi-agent] listener for event '${event.name}' threw: ${e?.message ?? String(e)}`,

@@ -1,33 +1,33 @@
-import { Meta } from "./dispatcher";
+import { Dispatcher } from "./dispatcher";
 import { NvimEvents } from "./extern";
 
 export type EventListener<K extends keyof NvimEvents> = (
-  meta: Meta,
+  dispatcher: Dispatcher,
   data: NvimEvents[K],
 ) => void;
 
 export const listenRegisterEventInterest: EventListener<
   "register_event_interest"
-> = (meta, data) => {
-  const ed = meta.dispatcher.eventData;
+> = (dispatcher, data) => {
+  const ed = dispatcher.eventData;
 
   // register listener if not already
   if (!ed.registeredListeners.has(data.event_name)) {
-    const castedOn = meta.pi.on as (
+    const castedOn = dispatcher.pi.on as (
       event: string,
       handler: (event: any) => unknown,
     ) => void;
 
     castedOn(data.event_name, async (event) => {
       // if dispatcher says we're not game just return immediately
-      if (!meta.dispatcher.isReady()) {
+      if (!dispatcher.isReady()) {
         return;
       }
 
-      const correlationId = meta.dispatcher.newCorrelationId();
+      const correlationId = dispatcher.newCorrelationId();
 
       const sender = () => {
-        meta.dispatcher.sendEvent("pi_event", {
+        dispatcher.sendEvent("pi_event", {
           name: data.event_name,
           correlation_id: correlationId,
           event: event,
@@ -35,7 +35,7 @@ export const listenRegisterEventInterest: EventListener<
       };
 
       if (ed.blockingListeners.get(data.event_name) ?? false) {
-        const p = meta.dispatcher.waitForEvent(
+        const p = dispatcher.waitForEvent(
           "pi_event_response",
           (event) => event.correlation_id === correlationId,
         );
@@ -46,14 +46,14 @@ export const listenRegisterEventInterest: EventListener<
         try {
           piEventResponse = await p;
         } catch (e) {
-          meta.ctx.ui.notify(
+          dispatcher.ctx.ui.notify(
             `[pi-agent] timed out waiting for blocking result for event '${data.event_name}'`,
           );
           return;
         }
 
         if (piEventResponse.error) {
-          meta.ctx.ui.notify(
+          dispatcher.ctx.ui.notify(
             `[pi-agent] blocking result for event '${data.event_name}' failed: ${piEventResponse.error}`,
           );
         }
@@ -65,8 +65,8 @@ export const listenRegisterEventInterest: EventListener<
     });
   }
 
-  meta.dispatcher.eventData.registeredListeners.add(data.event_name);
-  meta.dispatcher.eventData.blockingListeners.set(
+  dispatcher.eventData.registeredListeners.add(data.event_name);
+  dispatcher.eventData.blockingListeners.set(
     data.event_name,
     data.blocking || !!ed.blockingListeners.get(data.event_name),
   );
