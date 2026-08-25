@@ -68,6 +68,20 @@ export class Dispatcher {
     return this.client != null && !this.client.destroyed && !this.client.closed;
   }
 
+  clearReconnectTimer() {
+    if (this.reconnectTimer != null) {
+      clearTimeout(this.reconnectTimer);
+    }
+  }
+
+  cleanup() {
+    this.clearReconnectTimer();
+    if (this.client) {
+      this.client.destroy();
+      this.client = null;
+    }
+  }
+
   onDisconnect() {
     // we've disconnected, remove the client from the instance and use the client
     // passed into this function when handling reconnect
@@ -104,9 +118,7 @@ export class Dispatcher {
     }
 
     const client = createConnection({ path: this.socketPath }, () => {
-      if (this.reconnectTimer != null) {
-        clearTimeout(this.reconnectTimer);
-      }
+      this.clearReconnectTimer();
     });
 
     // other side signaled end of transmission

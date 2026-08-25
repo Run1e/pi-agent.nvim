@@ -27,6 +27,10 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.on("session_shutdown", async (event, ctx) => {
-    if (event.reason === "quit") return;
+    if (event.reason === "quit") {
+      return;
+    } else if (event.reason == "reload") {
+      dispatcher?.cleanup();
+    }
   });
 }
