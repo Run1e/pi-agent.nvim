@@ -205,6 +205,8 @@ pi.setup({
 
 Surface implementations are just Lua modules, so you can provide your own shaped like `pi_agent.Surface`.
 
+### Surface options
+
 #### `nvim` surface options
 
 ```lua
