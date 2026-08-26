@@ -8,7 +8,7 @@ Pragmatic integration between Neovim and the [pi agent harness](https://pi.dev/)
 - [API reference](#api-reference)
     - [Methods](#methods)
     - [Options](#options)
-- [Recipies](#recipies)
+- [Recipes](#recipes)
 
 ## ✨ Features
 
@@ -93,7 +93,7 @@ pi.setup({
 })
 ```
 
-All surfaces have their on options you can configure, see [surface options](#surface-options)
+All surfaces have their own options you can configure, see [surface options](#surface-options)
 
 ### Keymaps
 
@@ -243,7 +243,7 @@ Surface implementations are just Lua modules, so you can provide your own shaped
 }
 ```
 
-## Recipies
+## Recipes
 
 ### Automatically focus on successful commands
 
