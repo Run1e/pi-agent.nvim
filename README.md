@@ -4,12 +4,10 @@ Pragmatic integration between Neovim and the [pi agent harness](https://pi.dev/)
 
 - [Quickstart](#quickstart)
     - [Install](#install)
-    - [Set up your surface](#set-up-your-surface)
-    - [Keymaps](#keymaps)
+    - [Setup](#setup)
 - [API reference](#api-reference)
     - [Methods](#methods)
-    - [Setup options](#setup-options)
-    - [Surface options](#surface-options)
+    - [Options](#options)
 - [Recipies](#recipies)
 
 ## ✨ Features
@@ -80,7 +78,7 @@ require("pi-agent").setup()
 -- add your keymaps here...
 ```
 
-### Set up your surface
+### Setup
 
 pi-agent supports three "surfaces" (where your pi instance runs) out of the box:
 `nvim`, `herdr`, and `tmux`.
@@ -156,7 +154,7 @@ over the socket.
 | **close**(cb) | Close the window/tab pi is running in (will kill pi process unless surface is nvim) |
 | **stop**() | Stop the socket server |
 
-### Setup options
+### Options
 
 ```lua
 require("pi-agent").setup({
@@ -190,7 +188,7 @@ require("pi-agent").setup({
 })
 ```
 
-### Surface options
+---
 
 You can configure surfaces by calling `.configure()` on them, which also returns the module itself for convenience.
 
@@ -207,7 +205,7 @@ pi.setup({
 
 Surface implementations are just Lua modules, so you can provide your own shaped like `pi_agent.Surface`.
 
-#### nvim surface options
+#### `nvim` surface options
 
 ```lua
 {
@@ -225,7 +223,7 @@ Surface implementations are just Lua modules, so you can provide your own shaped
 }
 ```
 
-#### herdr surface options
+#### `herdr` surface options
 
 ```lua
 {
@@ -234,7 +232,7 @@ Surface implementations are just Lua modules, so you can provide your own shaped
 }
 ```
 
-#### tmux surface options
+#### `tmux` surface options
 
 ```lua
 {
