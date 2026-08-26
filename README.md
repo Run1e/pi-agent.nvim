@@ -118,7 +118,7 @@ See [Methods](#methods) for other functionality you can map.
 Some methods take a callback as an optional `cb` parameter that is called on success, failure, and timeout:
 
 ```lua
-pi.paste_range_location(function(result)
+pi.paste_selection_location(function(result)
 	---@field ok boolean
 	---@field reason ("command_success"|"command_failure"|"timeout"|"error")?
 	---@field error string?
