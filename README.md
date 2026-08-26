@@ -54,7 +54,7 @@ You can paste text to your in-progress pi message/prompt in multiple ways:
 | Method | Description |
 | - | - |
 | `paste_cursor_location()` | paste current cursor location (`file:linenum`) |
-| `paste_selection_location()` | paste current selection location (`file:startline:endline`) |
+| `paste_selection_location()` | paste current selection location (`file:startline-endline`) |
 | `paste_selection_contents()` | paste current selection contents |
 | `paste_qflist()` | paste quickfix list |
 
@@ -148,7 +148,7 @@ over the socket.
 | **on_blocking**(name, function(event) ... end) | Same as above but sends the return value back to pi to be returned in the real event handler |
 | **focus**(cb) | Focus on the pi instance |
 | **paste_cursor_location**(cb) | Paste cursor location (`file:linenum`) into pi prompt |
-| **paste_selection_location**(cb) | Paste range location (`file:startline:endline`) into pi prompt |
+| **paste_selection_location**(cb) | Paste range location (`file:startline-endline`) into pi prompt |
 | **paste_selection_contents**(cb) | Paste the current selection contents into your pi prompt |
 | **paste_qflist**(cb) | Paste your quickfix list into pi prompt |
 | **close**(cb) | Close the window/tab pi is running in (will kill pi process unless surface is nvim) |
