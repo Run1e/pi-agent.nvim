@@ -13,7 +13,7 @@ Pragmatic integration between Neovim and the [pi agent harness](https://pi.dev/)
 ## ✨ Features
 
 - Open pi inside a Neovim window/tab, or in a new terminal multiplexer tab (tmux/herdr)
-- Send context directly from Neovim; cursor/selection references, selection contents, etc
+- Send context directly from Neovim; cursor/selection locations, selection contents, etc
 - Let your agent read and edit the quickfix list via tools (`nvim_get_qflist`, `nvim_set_qflist`)
 - Trigger Lua functions on [pi events](https://pi.dev/docs/latest/extensions#events): `pi.on("agent_settled", function() ... end)`
 - pi extension bundled with plugin, no extra dependencies, built to be hackable
@@ -53,8 +53,8 @@ You can paste text to your in-progress pi message/prompt in multiple ways:
 
 | Method | Description |
 | - | - |
-| `paste_cursor_reference()` | paste a reference to the current cursor position (`file:linenum`) |
-| `paste_selection_reference()` | paste current selection reference (`file:startline:endline`) |
+| `paste_cursor_location()` | paste a reference to the current cursor position (`file:linenum`) |
+| `paste_selection_location()` | paste current selection reference (`file:startline:endline`) |
 | `paste_selection_contents()` | paste current selection contents |
 | `paste_qflist()` | paste quickfix list |
 
@@ -104,8 +104,8 @@ Here's a list of recommended defaults to get you started:
 vim.keymap.set("n", "<leader>as", pi.start, { desc = "pi: Start" })
 vim.keymap.set("n", "<leader>af", pi.focus, { desc = "pi: Focus" })
 vim.keymap.set("n", "<leader>ac", pi.close, { desc = "pi: Close" })
-vim.keymap.set({ "n", "x" }, "<leader>al", pi.paste_cursor_reference, { desc = "pi: Paste cursor reference" })
-vim.keymap.set({ "n", "x" }, "<leader>ar", pi.paste_selection_reference, { desc = "pi: Paste range reference" })
+vim.keymap.set({ "n", "x" }, "<leader>al", pi.paste_cursor_location, { desc = "pi: Paste cursor location" })
+vim.keymap.set({ "n", "x" }, "<leader>ar", pi.paste_selection_location, { desc = "pi: Paste range location" })
 vim.keymap.set({ "n", "x" }, "<leader>ap", pi.paste_selection_contents, { desc = "pi: Paste selection contents" })
 ```
 
@@ -118,14 +118,14 @@ See [Methods](#methods) for other functionality you can map.
 Some methods take a callback as an optional `cb` parameter that is called on success, failure, and timeout:
 
 ```lua
-pi.paste_range_reference(function(result)
+pi.paste_range_location(function(result)
 	---@field ok boolean
 	---@field reason ("command_success"|"command_failure"|"timeout"|"error")?
 	---@field error string?
 	---@field value any?
 
 	if result.ok then
-		vim.notify("Successfully pasted range reference, focusing pi")
+		vim.notify("Successfully pasted range location, focusing pi")
 		pi.focus()
 	else
 		-- handle failure if needed
@@ -147,8 +147,8 @@ over the socket.
 | **on**(name, function(event) ... end) | Listen to any pi event (asynchronously) |
 | **on_blocking**(name, function(event) ... end) | Same as above but sends the return value back to pi to be returned in the real event handler |
 | **focus**(cb) | Focus on the pi instance |
-| **paste_cursor_reference**(cb) | Paste a line reference (`file:linenum`) into pi prompt |
-| **paste_selection_reference**(cb) | Paste a range reference (`file:startline:endline`) of your current selection into pi prompt |
+| **paste_cursor_location**(cb) | Paste a line reference (`file:linenum`) into pi prompt |
+| **paste_selection_location**(cb) | Paste a range reference (`file:startline:endline`) of your current selection into pi prompt |
 | **paste_selection_contents**(cb) | Paste the current selection contents into your pi prompt |
 | **paste_qflist**(cb) | Paste your quickfix list into pi prompt |
 | **close**(cb) | Close the window/tab pi is running in (will kill pi process unless surface is nvim) |
@@ -247,12 +247,12 @@ Surface implementations are just Lua modules, so you can provide your own shaped
 
 ```lua
 vim.keymap.set({ "n", "x" }, "<leader>al", function()
-	pi.paste_cursor_reference(function(res)
+	pi.paste_cursor_location(function(res)
 		if res.ok then
 			pi.focus()
 		end
 	end)
-end, { desc = "pi: Paste line reference" })
+end, { desc = "pi: Paste line location" })
 ```
 
 ### Open/close quickfix list on populate/clear
