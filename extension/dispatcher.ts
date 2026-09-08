@@ -14,6 +14,7 @@ import {
 import { createConnection, Socket } from "net";
 import { findSocket } from "./utils";
 import { existsSync } from "fs";
+import { registerTools } from "./tools";
 
 type Message = {
   correlation_id: number;
@@ -44,6 +45,7 @@ export class Dispatcher {
   private socketPath: string;
   private nextId = 100;
   private reconnectTimer: NodeJS.Timeout | null;
+  private initData?: PiCommand<"init">["data"];
 
   public eventData: EventData = {
     registeredListeners: new Set(),
@@ -60,8 +62,22 @@ export class Dispatcher {
     this.reconnectTimer = null;
   }
 
-  updateContext(ctx: ExtensionContext) {
+  update(pi: ExtensionAPI, ctx: ExtensionContext) {
+    this.pi = pi;
     this.ctx = ctx;
+  }
+
+  setInitData(data: PiCommand<"init">["data"]) {
+    this.initData = data;
+    this.registerTools();
+  }
+
+  registerTools() {
+    if (!this.initData) {
+      throw new Error("Can't register tools without init data");
+    }
+
+    registerTools(this, this.initData.enabled_tools);
   }
 
   isReady(): boolean {

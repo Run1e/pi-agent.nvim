@@ -22,7 +22,7 @@ export type CommandHandler<K extends keyof PiCommands> = (
 ) => any;
 
 export const handleInit: CommandHandler<"init"> = (dispatcher, data) => {
-  registerTools(dispatcher.pi, dispatcher, data.enabled_tools);
+  dispatcher.setInitData(data);
 
   for (const event_name of data.events) {
     listenRegisterEventInterest(dispatcher, {
@@ -38,7 +38,7 @@ export const handleInit: CommandHandler<"init"> = (dispatcher, data) => {
     });
   }
 
-  dispatcher.ctx.ui.notify("[pi-agent] Connected to Neovim :D");
+  dispatcher.ctx.ui.notify("[pi-agent] Connected to Neovim");
 };
 
 export const handlePing: CommandHandler<"ping"> = (dispatcher, data) => {

@@ -22,7 +22,10 @@ export default function (pi: ExtensionAPI) {
         listenRegisterEventInterest,
       );
     } else {
-      dispatcher.updateContext(ctx);
+      // on new session with existing dispatcher, update the extension api & context
+      // and then re-register tools
+      dispatcher.update(pi, ctx);
+      dispatcher.registerTools();
     }
   });
 

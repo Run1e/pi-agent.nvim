@@ -1,12 +1,9 @@
-import { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import Type from "typebox";
 import { Dispatcher } from "./dispatcher";
 
-export function registerTools(
-  pi: ExtensionAPI,
-  dispatcher: Dispatcher,
-  enabledTools: string[],
-) {
+export function registerTools(dispatcher: Dispatcher, enabledTools: string[]) {
+  const pi = dispatcher.pi;
+
   if (enabledTools.includes("nvim_get_qflist")) {
     pi.registerTool({
       name: "nvim_get_qflist",

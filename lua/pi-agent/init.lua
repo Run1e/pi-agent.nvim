@@ -344,7 +344,7 @@ function Pi.on_connect()
 			utils.raise("Failed to init pi configuration over socket")
 		end
 
-		utils.info("Connected to pi :D")
+		utils.info("Connected to pi")
 	end
 
 	local tools = config.get_opts().tools
@@ -371,7 +371,7 @@ function Pi.on_connect()
 end
 
 function Pi.on_disconnect()
-	utils.info("pi disconnected D:")
+	utils.info("pi disconnected")
 
 	local opts = config.get_opts()
 
