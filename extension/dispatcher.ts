@@ -69,10 +69,9 @@ export class Dispatcher {
 
   setInitData(data: PiCommand<"init">["data"]) {
     this.initData = data;
-    this.registerTools();
   }
 
-  registerTools() {
+  initSession() {
     if (!this.initData) {
       throw new Error("Can't register tools without init data");
     }

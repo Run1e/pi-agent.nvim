@@ -23,6 +23,7 @@ export type CommandHandler<K extends keyof PiCommands> = (
 
 export const handleInit: CommandHandler<"init"> = (dispatcher, data) => {
   dispatcher.setInitData(data);
+  dispatcher.initSession();
 
   for (const event_name of data.events) {
     listenRegisterEventInterest(dispatcher, {

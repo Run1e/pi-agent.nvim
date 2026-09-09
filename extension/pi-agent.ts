@@ -25,7 +25,7 @@ export default function (pi: ExtensionAPI) {
       // on new session with existing dispatcher, update the extension api & context
       // and then re-register tools
       dispatcher.update(pi, ctx);
-      dispatcher.registerTools();
+      dispatcher.initSession();
     }
   });
 
