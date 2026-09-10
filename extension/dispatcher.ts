@@ -1,391 +1,350 @@
-import {
-  ExtensionAPI,
-  ExtensionContext,
-} from "@earendil-works/pi-coding-agent";
+import { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 import { CommandHandler, PiCommand, PiCommands } from "./commands";
 import { EventListener } from "./events";
-import {
-  NvimCommandResults,
-  NvimCommands,
-  NvimEvent,
-  NvimEvents,
-} from "./extern";
+import { NvimCommandResults, NvimCommands, NvimEvent, NvimEvents } from "./extern";
 import { createConnection, Socket } from "net";
 import { findSocket } from "./utils";
 import { existsSync } from "fs";
 import { registerTools } from "./tools";
 
 type Message = {
-  correlation_id: number;
-  type: "command" | "event";
-  name: string;
-  data: unknown;
+	correlation_id: number;
+	type: "command" | "event";
+	name: string;
+	data: unknown;
 };
 
 export type EventData = {
-  registeredListeners: Set<string>;
-  blockingListeners: Map<string, boolean>;
+	registeredListeners: Set<string>;
+	blockingListeners: Map<string, boolean>;
 };
 
 export class Dispatcher {
-  private handlers = new Map<
-    keyof PiCommands,
-    CommandHandler<keyof PiCommands>
-  >();
+	private handlers = new Map<keyof PiCommands, CommandHandler<keyof PiCommands>>();
 
-  private listeners = new Map<
-    keyof NvimEvents,
-    EventListener<keyof NvimEvents>[]
-  >();
+	private listeners = new Map<keyof NvimEvents, EventListener<keyof NvimEvents>[]>();
 
-  public pi: ExtensionAPI;
-  public ctx: ExtensionContext;
-  private client: Socket | null;
-  private socketPath: string;
-  private nextId = 100;
-  private reconnectTimer: NodeJS.Timeout | null;
-  private initData?: PiCommand<"init">["data"];
+	public pi: ExtensionAPI;
+	public ctx: ExtensionContext;
+	private client: Socket | null;
+	private socketPath: string;
+	private nextId = 100;
+	private reconnectTimer: NodeJS.Timeout | null;
+	private initData?: PiCommand<"init">["data"];
 
-  public eventData: EventData = {
-    registeredListeners: new Set(),
-    blockingListeners: new Map(),
-  };
+	public eventData: EventData = {
+		registeredListeners: new Set(),
+		blockingListeners: new Map(),
+	};
 
-  constructor(pi: ExtensionAPI, ctx: ExtensionContext) {
-    this.pi = pi;
-    this.ctx = ctx;
+	constructor(pi: ExtensionAPI, ctx: ExtensionContext) {
+		this.pi = pi;
+		this.ctx = ctx;
 
-    this.socketPath = findSocket();
-    this.client = this.ensureClient();
+		this.socketPath = findSocket();
+		this.client = this.ensureClient();
 
-    this.reconnectTimer = null;
-  }
+		this.reconnectTimer = null;
+	}
 
-  update(pi: ExtensionAPI, ctx: ExtensionContext) {
-    this.pi = pi;
-    this.ctx = ctx;
-  }
+	update(pi: ExtensionAPI, ctx: ExtensionContext) {
+		this.pi = pi;
+		this.ctx = ctx;
+	}
 
-  setInitData(data: PiCommand<"init">["data"]) {
-    this.initData = data;
-  }
+	setInitData(data: PiCommand<"init">["data"]) {
+		this.initData = data;
+	}
 
-  initSession() {
-    if (!this.initData) {
-      throw new Error("Can't init session without init data");
-    }
+	initSession() {
+		if (!this.initData) {
+			throw new Error("Can't init session without init data");
+		}
 
-    registerTools(this, this.initData.enabled_tools);
-  }
+		registerTools(this, this.initData.enabled_tools);
+	}
 
-  isReady(): boolean {
-    return this.client != null && !this.client.destroyed && !this.client.closed;
-  }
+	isReady(): boolean {
+		return this.client != null && !this.client.destroyed && !this.client.closed;
+	}
 
-  clearReconnectTimer() {
-    if (this.reconnectTimer != null) {
-      clearTimeout(this.reconnectTimer);
-    }
-  }
+	clearReconnectTimer() {
+		if (this.reconnectTimer != null) {
+			clearTimeout(this.reconnectTimer);
+		}
+	}
 
-  cleanup() {
-    this.clearReconnectTimer();
-    if (this.client) {
-      this.client.destroy();
-      this.client = null;
-    }
-  }
+	cleanup() {
+		this.clearReconnectTimer();
+		if (this.client) {
+			this.client.destroy();
+			this.client = null;
+		}
+	}
 
-  onDisconnect() {
-    // we've disconnected, remove the client from the instance and use the client
-    // passed into this function when handling reconnect
-    if (this.client == null) {
-      return;
-    }
+	onDisconnect() {
+		// we've disconnected, remove the client from the instance and use the client
+		// passed into this function when handling reconnect
+		if (this.client == null) {
+			return;
+		}
 
-    this.client.destroy();
-    this.client = null;
+		this.client.destroy();
+		this.client = null;
 
-    this.reconnectTimer = setTimeout(() => {
-      this.ctx.ui.notify("[pi-agent] Attempting reconnect");
+		this.reconnectTimer = setTimeout(() => {
+			this.ctx.ui.notify("[pi-agent] Attempting reconnect");
 
-      this.reconnectTimer = null;
+			this.reconnectTimer = null;
 
-      if (!existsSync(this.socketPath)) {
-        this.ctx.ui.notify(
-          "[pi-agent] Socket file deleted, not attempting more reconnects",
-        );
-        return;
-      }
+			if (!existsSync(this.socketPath)) {
+				this.ctx.ui.notify("[pi-agent] Socket file deleted, not attempting more reconnects");
+				return;
+			}
 
-      const client = this.ensureClient();
-      if (client != null && this.client == null) {
-        this.client = client;
-      }
-    }, 500);
-  }
+			const client = this.ensureClient();
+			if (client != null && this.client == null) {
+				this.client = client;
+			}
+		}, 500);
+	}
 
-  ensureClient(): Socket | null {
-    // do nothing if we have a good client
-    if (this.isReady()) {
-      return null;
-    }
+	ensureClient(): Socket | null {
+		// do nothing if we have a good client
+		if (this.isReady()) {
+			return null;
+		}
 
-    const client = createConnection({ path: this.socketPath }, () => {
-      this.clearReconnectTimer();
-    });
+		const client = createConnection({ path: this.socketPath }, () => {
+			this.clearReconnectTimer();
+		});
 
-    // other side signaled end of transmission
-    client.on("end", () => {
-      if (this.client == client) {
-        this.onDisconnect();
-      }
-    });
+		// other side signaled end of transmission
+		client.on("end", () => {
+			if (this.client == client) {
+				this.onDisconnect();
+			}
+		});
 
-    // socket fully closed
-    client.on("close", () => {
-      if (this.client == client) {
-        this.onDisconnect();
-      }
-    });
+		// socket fully closed
+		client.on("close", () => {
+			if (this.client == client) {
+				this.onDisconnect();
+			}
+		});
 
-    // an error occurred, 'close' will be called directly afterwards
-    client.on("error", (err) => {
-      this.ctx.ui.notify(
-        `[pi-agent] Socket error: ${err?.message ?? String(err)}`,
-      );
-    });
+		// an error occurred, 'close' will be called directly afterwards
+		client.on("error", (err) => {
+			this.ctx.ui.notify(`[pi-agent] Socket error: ${err?.message ?? String(err)}`);
+		});
 
-    let buffer = "";
+		let buffer = "";
 
-    client.on("data", (chunk: Buffer) => {
-      buffer += chunk.toString("utf8");
+		client.on("data", (chunk: Buffer) => {
+			buffer += chunk.toString("utf8");
 
-      let nl: number;
-      while ((nl = buffer.indexOf("\n")) !== -1) {
-        const line = buffer.slice(0, nl);
-        buffer = buffer.slice(nl + 1);
-        if (line.length > 0) {
-          let msg: unknown;
-          try {
-            msg = JSON.parse(line);
-          } catch {
-            continue;
-          }
+			let nl: number;
+			while ((nl = buffer.indexOf("\n")) !== -1) {
+				const line = buffer.slice(0, nl);
+				buffer = buffer.slice(nl + 1);
+				if (line.length > 0) {
+					let msg: unknown;
+					try {
+						msg = JSON.parse(line);
+					} catch {
+						continue;
+					}
 
-          this.dispatch(msg);
-        }
-      }
-    });
+					this.dispatch(msg);
+				}
+			}
+		});
 
-    return client;
-  }
+		return client;
+	}
 
-  sendData(data: Message) {
-    if (!this.isReady()) {
-      return;
-    }
+	sendData(data: Message) {
+		if (!this.isReady()) {
+			return;
+		}
 
-    // lsp complains but this shouldn't be null because the guard above
-    this.client?.write(JSON.stringify(data) + "\n");
-  }
+		// lsp complains but this shouldn't be null because the guard above
+		this.client?.write(JSON.stringify(data) + "\n");
+	}
 
-  setHandler<K extends keyof PiCommands>(name: K, handler: CommandHandler<K>) {
-    this.handlers.set(name, handler as CommandHandler<keyof PiCommands>);
-  }
+	setHandler<K extends keyof PiCommands>(name: K, handler: CommandHandler<K>) {
+		this.handlers.set(name, handler as CommandHandler<keyof PiCommands>);
+	}
 
-  addListener<K extends keyof NvimEvents>(name: K, listener: EventListener<K>) {
-    let arr = this.listeners.get(name);
+	addListener<K extends keyof NvimEvents>(name: K, listener: EventListener<K>) {
+		let arr = this.listeners.get(name);
 
-    if (arr === undefined) {
-      arr = [];
-      this.listeners.set(name, arr);
-    }
+		if (arr === undefined) {
+			arr = [];
+			this.listeners.set(name, arr);
+		}
 
-    arr.push(listener as EventListener<keyof NvimEvents>);
+		arr.push(listener as EventListener<keyof NvimEvents>);
 
-    return () => {
-      const current = this.listeners.get(name);
-      if (current !== undefined) {
-        const idx = current.indexOf(
-          listener as EventListener<keyof NvimEvents>,
-        );
-        if (idx !== -1) {
-          current.splice(idx, 1);
-        }
-        if (current.length === 0) {
-          this.listeners.delete(name);
-        }
-      }
-    };
-  }
+		return () => {
+			const current = this.listeners.get(name);
+			if (current !== undefined) {
+				const idx = current.indexOf(listener as EventListener<keyof NvimEvents>);
+				if (idx !== -1) {
+					current.splice(idx, 1);
+				}
+				if (current.length === 0) {
+					this.listeners.delete(name);
+				}
+			}
+		};
+	}
 
-  newCorrelationId() {
-    const nextId = this.nextId;
-    this.nextId += 1;
-    return nextId;
-  }
+	newCorrelationId() {
+		const nextId = this.nextId;
+		this.nextId += 1;
+		return nextId;
+	}
 
-  async waitForEvent<K extends keyof NvimEvents>(
-    name: K,
-    predicate: (event: NvimEvents[K]) => boolean,
-    timeout: number = 2500,
-  ): Promise<NvimEvents[K]> {
-    let timeoutId: NodeJS.Timeout;
-    let unsubscribe: () => void;
+	async waitForEvent<K extends keyof NvimEvents>(
+		name: K,
+		predicate: (event: NvimEvents[K]) => boolean,
+		timeout: number = 2500,
+	): Promise<NvimEvents[K]> {
+		let timeoutId: NodeJS.Timeout;
+		let unsubscribe: () => void;
 
-    return new Promise((resolve, reject) => {
-      if (timeout != 0) {
-        timeoutId = setTimeout(() => {
-          reject(new Error(`timed out in waitForEvent '${name}'`));
-        }, timeout);
-      }
+		return new Promise((resolve, reject) => {
+			if (timeout != 0) {
+				timeoutId = setTimeout(() => {
+					reject(new Error(`timed out in waitForEvent '${name}'`));
+				}, timeout);
+			}
 
-      unsubscribe = this.addListener(name, (_, data: NvimEvents[K]) => {
-        if (predicate(data)) {
-          resolve(data);
-        }
-      });
-    }).finally(() => {
-      try {
-        unsubscribe();
-      } catch {
-        //
-      }
+			unsubscribe = this.addListener(name, (_, data: NvimEvents[K]) => {
+				if (predicate(data)) {
+					resolve(data);
+				}
+			});
+		}).finally(() => {
+			try {
+				unsubscribe();
+			} catch {
+				//
+			}
 
-      if (timeoutId != null) {
-        clearTimeout(timeoutId);
-      }
-    }) as Promise<NvimEvents[K]>;
-  }
+			if (timeoutId != null) {
+				clearTimeout(timeoutId);
+			}
+		}) as Promise<NvimEvents[K]>;
+	}
 
-  async sendCommand<K extends keyof NvimCommands>(
-    name: K,
-    data: NvimCommands[K],
-  ): Promise<NvimCommandResults[K]> {
-    if (!this.isReady()) {
-      throw new Error("Not connected to Neovim");
-    }
+	async sendCommand<K extends keyof NvimCommands>(name: K, data: NvimCommands[K]): Promise<NvimCommandResults[K]> {
+		if (!this.isReady()) {
+			throw new Error("Not connected to Neovim");
+		}
 
-    const correlationId = this.newCorrelationId();
+		const correlationId = this.newCorrelationId();
 
-    this.sendData({
-      type: "command",
-      name: name,
-      correlation_id: correlationId,
-      data: data,
-    });
+		this.sendData({
+			type: "command",
+			name: name,
+			correlation_id: correlationId,
+			data: data,
+		});
 
-    return Promise.race([
-      this.waitForEvent(
-        "command_success",
-        (data) => data.correlation_id === correlationId,
-      ),
-      this.waitForEvent(
-        "command_failure",
-        (data) => data.correlation_id === correlationId,
-      ).then((data) => {
-        throw new Error(data.error);
-      }),
-    ]).then((data) => data.value);
-  }
+		return Promise.race([
+			this.waitForEvent("command_success", (data) => data.correlation_id === correlationId),
+			this.waitForEvent("command_failure", (data) => data.correlation_id === correlationId).then((data) => {
+				throw new Error(data.error);
+			}),
+		]).then((data) => data.value);
+	}
 
-  sendEvent(name: string, data: unknown) {
-    if (!this.isReady()) {
-      return;
-    }
+	sendEvent(name: string, data: unknown) {
+		if (!this.isReady()) {
+			return;
+		}
 
-    // events are fire-and-forget
-    this.sendData({
-      type: "event",
-      name: name,
-      correlation_id: this.newCorrelationId(),
-      data: data,
-    });
-  }
+		// events are fire-and-forget
+		this.sendData({
+			type: "event",
+			name: name,
+			correlation_id: this.newCorrelationId(),
+			data: data,
+		});
+	}
 
-  async handleCommand<K extends keyof PiCommands>(command: PiCommand<K>) {
-    if (!this.isReady()) {
-      return;
-    }
+	async handleCommand<K extends keyof PiCommands>(command: PiCommand<K>) {
+		if (!this.isReady()) {
+			return;
+		}
 
-    let value;
+		let value;
 
-    try {
-      const handler = this.handlers.get(command.name);
-      if (handler == undefined) {
-        throw new Error(`Unknown command: ${command.name}`);
-      }
+		try {
+			const handler = this.handlers.get(command.name);
+			if (handler == undefined) {
+				throw new Error(`Unknown command: ${command.name}`);
+			}
 
-      value = await handler(this, command.data);
-    } catch (e) {
-      this.sendData({
-        type: "event",
-        name: "command_failure",
-        correlation_id: command.correlation_id,
-        data: {
-          correlation_id: command.correlation_id,
-          error: e instanceof Error ? e.message : String(e),
-        },
-      });
-      return;
-    }
+			value = await handler(this, command.data);
+		} catch (e) {
+			this.sendData({
+				type: "event",
+				name: "command_failure",
+				correlation_id: command.correlation_id,
+				data: {
+					correlation_id: command.correlation_id,
+					error: e instanceof Error ? e.message : String(e),
+				},
+			});
+			return;
+		}
 
-    this.sendData({
-      type: "event",
-      name: "command_success",
-      correlation_id: command.correlation_id,
-      data: { correlation_id: command.correlation_id, value: value },
-    });
-  }
+		this.sendData({
+			type: "event",
+			name: "command_success",
+			correlation_id: command.correlation_id,
+			data: { correlation_id: command.correlation_id, value: value },
+		});
+	}
 
-  handleEvent<K extends keyof NvimEvents>(event: NvimEvent<K>) {
-    if (!this.isReady()) {
-      return;
-    }
+	handleEvent<K extends keyof NvimEvents>(event: NvimEvent<K>) {
+		if (!this.isReady()) {
+			return;
+		}
 
-    const listeners = this.listeners.get(event.name) ?? [];
+		const listeners = this.listeners.get(event.name) ?? [];
 
-    for (const listener of listeners) {
-      try {
-        listener(this, event.data);
-      } catch (e) {
-        this.ctx.ui.notify(
-          `[pi-agent] Listener for event '${event.name}' threw: ${e instanceof Error ? e.message : String(e)}`,
-        );
-        continue;
-      }
-    }
-  }
+		for (const listener of listeners) {
+			try {
+				listener(this, event.data);
+			} catch (e) {
+				this.ctx.ui.notify(
+					`[pi-agent] Listener for event '${event.name}' threw: ${e instanceof Error ? e.message : String(e)}`,
+				);
+				continue;
+			}
+		}
+	}
 
-  isCommand(msg: unknown): msg is PiCommand {
-    return (
-      msg != null &&
-      typeof msg == "object" &&
-      "type" in msg &&
-      msg.type === "command"
-    );
-  }
+	isCommand(msg: unknown): msg is PiCommand {
+		return msg != null && typeof msg == "object" && "type" in msg && msg.type === "command";
+	}
 
-  isEvent(msg: unknown): msg is NvimEvent {
-    return (
-      msg != null &&
-      typeof msg == "object" &&
-      "type" in msg &&
-      msg.type === "event"
-    );
-  }
+	isEvent(msg: unknown): msg is NvimEvent {
+		return msg != null && typeof msg == "object" && "type" in msg && msg.type === "event";
+	}
 
-  dispatch(msg: unknown) {
-    if (this.isCommand(msg)) {
-      this.handleCommand(msg).catch((e) => {
-        this.ctx.ui.notify(
-          `Handler for command '${msg.name}' threw: ${e instanceof Error ? e.message : String(e)}`,
-        );
-      });
-    } else if (this.isEvent(msg)) {
-      this.handleEvent(msg);
-    }
-  }
+	dispatch(msg: unknown) {
+		if (this.isCommand(msg)) {
+			this.handleCommand(msg).catch((e) => {
+				this.ctx.ui.notify(`Handler for command '${msg.name}' threw: ${e instanceof Error ? e.message : String(e)}`);
+			});
+		} else if (this.isEvent(msg)) {
+			this.handleEvent(msg);
+		}
+	}
 }

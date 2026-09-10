@@ -2,170 +2,157 @@ import Type from "typebox";
 import { Dispatcher } from "./dispatcher";
 
 export function registerTools(dispatcher: Dispatcher, enabledTools: string[]) {
-  const pi = dispatcher.pi;
+	const pi = dispatcher.pi;
 
-  if (enabledTools.includes("nvim_get_qflist")) {
-    pi.registerTool({
-      name: "nvim_get_qflist",
-      label: "Neovim get quickfix list",
-      description: "Retrieves the Neovim quickfix list",
-      promptGuidelines: [
-        "Use nvim_get_qflist when you need to access the Neovim quickfix list (qflist).",
-      ],
-      parameters: Type.Object({}),
+	if (enabledTools.includes("nvim_get_qflist")) {
+		pi.registerTool({
+			name: "nvim_get_qflist",
+			label: "Neovim get quickfix list",
+			description: "Retrieves the Neovim quickfix list",
+			promptGuidelines: ["Use nvim_get_qflist when you need to access the Neovim quickfix list (qflist)."],
+			parameters: Type.Object({}),
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      async execute(_toolCallId, params, signal, onUpdate, ctx) {
-        const res = await dispatcher.sendCommand("nvim_get_qflist", null);
-        const output = res.length ? res.join("\n") : "Quickfix list is empty";
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			async execute(_toolCallId, params, signal, onUpdate, ctx) {
+				const res = await dispatcher.sendCommand("nvim_get_qflist", null);
+				const output = res.length ? res.join("\n") : "Quickfix list is empty";
 
-        return {
-          content: [
-            {
-              type: "text",
-              text: output,
-            },
-          ],
-          details: {},
-        };
-      },
-    });
-  }
+				return {
+					content: [
+						{
+							type: "text",
+							text: output,
+						},
+					],
+					details: {},
+				};
+			},
+		});
+	}
 
-  if (enabledTools.includes("nvim_set_qflist")) {
-    pi.registerTool({
-      name: "nvim_set_qflist",
-      label: "Neovim set quickfix list",
-      description: "Set the Neovim quickfix list",
-      promptGuidelines: [
-        "Use nvim_set_qflist when you need to set the Neovim quickfix list (qflist).",
-        "NEVER call nvim_set_qflist unprompted, only do so after being asked to, or after suggesting it yourself and being given permission.",
-        "You may suggest to put data in the quickfix list for user convenience (like if you have a list of lines with errors, improvements, suggestions, etc).",
-        "You can replace the entire quickfix list in one call with action = replace, or you can incrementally append over several calls with action = append.",
-        "Call nvim_set_qflist with an empty list to clear the quickfix list.",
-        "If the user asks you to add a filename:lnum to the quickfix list, you may not need to read the file for context at all -- just call this tool and add it.",
-      ],
-      parameters: Type.Object({
-        action: Type.Enum(["replace", "append"], {
-          description:
-            "Whether to fully replace or append to the quickfix list",
-        }),
-        entries: Type.Array(
-          Type.Object({
-            file: Type.String({
-              description: "File path, from CWD or absolute",
-            }),
-            lnum: Type.Integer({ description: "Line number (1-based)" }),
-            col: Type.Integer({
-              description: "Column number (1-based)",
-              default: 1,
-            }),
-            special_comment: Type.Optional(
-              Type.String({
-                description:
-                  "DO NOT put line contents here, prefer to omit this field. ONLY set this if you want to set a custom comment for this quickfix list entry",
-              }),
-            ),
-          }),
-          { description: "Entries to put in the quickfix list" },
-        ),
-      }),
+	if (enabledTools.includes("nvim_set_qflist")) {
+		pi.registerTool({
+			name: "nvim_set_qflist",
+			label: "Neovim set quickfix list",
+			description: "Set the Neovim quickfix list",
+			promptGuidelines: [
+				"Use nvim_set_qflist when you need to set the Neovim quickfix list (qflist).",
+				"NEVER call nvim_set_qflist unprompted, only do so after being asked to, or after suggesting it yourself and being given permission.",
+				"You may suggest to put data in the quickfix list for user convenience (like if you have a list of lines with errors, improvements, suggestions, etc).",
+				"You can replace the entire quickfix list in one call with action = replace, or you can incrementally append over several calls with action = append.",
+				"Call nvim_set_qflist with an empty list to clear the quickfix list.",
+				"If the user asks you to add a filename:lnum to the quickfix list, you may not need to read the file for context at all -- just call this tool and add it.",
+			],
+			parameters: Type.Object({
+				action: Type.Enum(["replace", "append"], {
+					description: "Whether to fully replace or append to the quickfix list",
+				}),
+				entries: Type.Array(
+					Type.Object({
+						file: Type.String({
+							description: "File path, from CWD or absolute",
+						}),
+						lnum: Type.Integer({ description: "Line number (1-based)" }),
+						col: Type.Integer({
+							description: "Column number (1-based)",
+							default: 1,
+						}),
+						special_comment: Type.Optional(
+							Type.String({
+								description:
+									"DO NOT put line contents here, prefer to omit this field. ONLY set this if you want to set a custom comment for this quickfix list entry",
+							}),
+						),
+					}),
+					{ description: "Entries to put in the quickfix list" },
+				),
+			}),
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      async execute(toolCallId, params, signal, onUpdate, ctx) {
-        const entryCount: number = await dispatcher.sendCommand(
-          "nvim_set_qflist",
-          params,
-        );
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			async execute(toolCallId, params, signal, onUpdate, ctx) {
+				const entryCount: number = await dispatcher.sendCommand("nvim_set_qflist", params);
 
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Quickfix list successfully updated, currently has ${entryCount} entries`,
-            },
-          ],
-          details: {},
-        };
-      },
-    });
-  }
+				return {
+					content: [
+						{
+							type: "text",
+							text: `Quickfix list successfully updated, currently has ${entryCount} entries`,
+						},
+					],
+					details: {},
+				};
+			},
+		});
+	}
 
-  if (enabledTools.includes("nvim_get_diagnostic_namespaces")) {
-    pi.registerTool({
-      name: "nvim_get_diagnostic_namespaces",
-      label: "Neovim get diagnostic namespaces",
-      description: "Get a list of current lsp diagnostic namespaces.",
-      promptGuidelines: [
-        "Use nvim_get_diagnostic_namespaces before nvim_get_diagnostics so you know what namespace to use.",
-      ],
-      parameters: Type.Object({}),
+	if (enabledTools.includes("nvim_get_diagnostic_namespaces")) {
+		pi.registerTool({
+			name: "nvim_get_diagnostic_namespaces",
+			label: "Neovim get diagnostic namespaces",
+			description: "Get a list of current lsp diagnostic namespaces.",
+			promptGuidelines: [
+				"Use nvim_get_diagnostic_namespaces before nvim_get_diagnostics so you know what namespace to use.",
+			],
+			parameters: Type.Object({}),
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      async execute(_toolCallId, params, signal, onUpdate, ctx) {
-        const res = await dispatcher.sendCommand(
-          "nvim_get_diagnostic_namespaces",
-          null,
-        );
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			async execute(_toolCallId, params, signal, onUpdate, ctx) {
+				const res = await dispatcher.sendCommand("nvim_get_diagnostic_namespaces", null);
 
-        let text;
-        if (Object.keys(res.namespaces).length === 0) {
-          text = "No diagnostic namespaces";
-        } else {
-          text = Object.entries(res.namespaces)
-            .map(([name, id]) => `${name} has id ${id}`)
-            .join("\n");
-        }
+				let text;
+				if (Object.keys(res.namespaces).length === 0) {
+					text = "No diagnostic namespaces";
+				} else {
+					text = Object.entries(res.namespaces)
+						.map(([name, id]) => `${name} has id ${id}`)
+						.join("\n");
+				}
 
-        return {
-          content: [
-            {
-              type: "text",
-              text: text,
-            },
-          ],
-          details: {},
-        };
-      },
-    });
-  }
+				return {
+					content: [
+						{
+							type: "text",
+							text: text,
+						},
+					],
+					details: {},
+				};
+			},
+		});
+	}
 
-  if (enabledTools.includes("nvim_get_diagnostics")) {
-    pi.registerTool({
-      name: "nvim_get_diagnostics",
-      label: "Neovim get diagnostics",
-      description: "Get a list of LSP diagnostic messages by namespace id.",
-      promptGuidelines: [
-        "Use nvim_get_diagnostics to get the LSP diagnostics for a namespace. A namespace is generally per LSP.",
-      ],
-      parameters: Type.Object({
-        namespace_id: Type.Optional(
-          Type.Integer({
-            description:
-              "Namespace ID to get diagnostics for. Leave blank to get all diagnostics for all namespaces.",
-          }),
-        ),
-      }),
+	if (enabledTools.includes("nvim_get_diagnostics")) {
+		pi.registerTool({
+			name: "nvim_get_diagnostics",
+			label: "Neovim get diagnostics",
+			description: "Get a list of LSP diagnostic messages by namespace id.",
+			promptGuidelines: [
+				"Use nvim_get_diagnostics to get the LSP diagnostics for a namespace. A namespace is generally per LSP.",
+			],
+			parameters: Type.Object({
+				namespace_id: Type.Optional(
+					Type.Integer({
+						description: "Namespace ID to get diagnostics for. Leave blank to get all diagnostics for all namespaces.",
+					}),
+				),
+			}),
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      async execute(_toolCallId, params, signal, onUpdate, ctx) {
-        const res = await dispatcher.sendCommand(
-          "nvim_get_diagnostics",
-          params,
-        );
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			async execute(_toolCallId, params, signal, onUpdate, ctx) {
+				const res = await dispatcher.sendCommand("nvim_get_diagnostics", params);
 
-        const output = res.length ? res.join("\n") : "No diagnostics";
+				const output = res.length ? res.join("\n") : "No diagnostics";
 
-        return {
-          content: [
-            {
-              type: "text",
-              text: output,
-            },
-          ],
-          details: {},
-        };
-      },
-    });
-  }
+				return {
+					content: [
+						{
+							type: "text",
+							text: output,
+						},
+					],
+					details: {},
+				};
+			},
+		});
+	}
 }

@@ -1,33 +1,31 @@
 import { existsSync } from "fs";
 
 export function findSocket(): string {
-  const sessionIdIdx = process.argv.findIndex(
-    (value) => value === "--session-id",
-  );
+	const sessionIdIdx = process.argv.findIndex((value) => value === "--session-id");
 
-  if (sessionIdIdx == -1) {
-    throw new Error("[pi-agent] Couldn't find session name");
-  }
+	if (sessionIdIdx == -1) {
+		throw new Error("[pi-agent] Couldn't find session name");
+	}
 
-  const sessionName = process.argv[sessionIdIdx + 1];
+	const sessionName = process.argv[sessionIdIdx + 1];
 
-  const tmpDir = "/tmp";
-  const runtimeDir = process.env.XDG_RUNTIME_DIR;
+	const tmpDir = "/tmp";
+	const runtimeDir = process.env.XDG_RUNTIME_DIR;
 
-  let currentCandidate: string;
+	let currentCandidate: string;
 
-  if (runtimeDir && runtimeDir.length) {
-    currentCandidate = runtimeDir + "/pi-agent/" + sessionName + ".sock";
+	if (runtimeDir && runtimeDir.length) {
+		currentCandidate = runtimeDir + "/pi-agent/" + sessionName + ".sock";
 
-    if (existsSync(currentCandidate)) {
-      return currentCandidate;
-    }
-  }
+		if (existsSync(currentCandidate)) {
+			return currentCandidate;
+		}
+	}
 
-  currentCandidate = tmpDir + "/" + sessionName + ".sock";
-  if (existsSync(currentCandidate)) {
-    return currentCandidate;
-  }
+	currentCandidate = tmpDir + "/" + sessionName + ".sock";
+	if (existsSync(currentCandidate)) {
+		return currentCandidate;
+	}
 
-  throw new Error("Could not find pi-agent session socket");
+	throw new Error("Could not find pi-agent session socket");
 }

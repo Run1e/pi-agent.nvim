@@ -2,85 +2,79 @@ import { Dispatcher } from "./dispatcher";
 import { listenRegisterEventInterest } from "./events";
 
 export type PiCommands = {
-  init: {
-    enabled_tools: string[];
-    events: string[];
-    events_blocking: string[];
-  };
-  append_text: { lines: string[]; as_paragraph: boolean };
-  ping: object;
+	init: {
+		enabled_tools: string[];
+		events: string[];
+		events_blocking: string[];
+	};
+	append_text: { lines: string[]; as_paragraph: boolean };
+	ping: object;
 };
 
 export type PiCommand<K extends keyof PiCommands = keyof PiCommands> = {
-  [Key in K]: { correlation_id: number; name: Key; data: PiCommands[Key] };
+	[Key in K]: { correlation_id: number; name: Key; data: PiCommands[Key] };
 }[K];
 
-export type CommandHandler<K extends keyof PiCommands> = (
-  dispatcher: Dispatcher,
-  data: PiCommands[K],
-) => unknown;
+export type CommandHandler<K extends keyof PiCommands> = (dispatcher: Dispatcher, data: PiCommands[K]) => unknown;
 
 export const handleInit: CommandHandler<"init"> = (dispatcher, data) => {
-  dispatcher.setInitData(data);
-  dispatcher.initSession();
+	dispatcher.setInitData(data);
+	dispatcher.initSession();
 
-  for (const event_name of data.events) {
-    listenRegisterEventInterest(dispatcher, {
-      event_name: event_name,
-      blocking: false,
-    });
-  }
+	for (const event_name of data.events) {
+		listenRegisterEventInterest(dispatcher, {
+			event_name: event_name,
+			blocking: false,
+		});
+	}
 
-  for (const event_name of data.events_blocking) {
-    listenRegisterEventInterest(dispatcher, {
-      event_name: event_name,
-      blocking: true,
-    });
-  }
+	for (const event_name of data.events_blocking) {
+		listenRegisterEventInterest(dispatcher, {
+			event_name: event_name,
+			blocking: true,
+		});
+	}
 
-  dispatcher.ctx.ui.notify("[pi-agent] Connected to Neovim");
+	dispatcher.ctx.ui.notify("[pi-agent] Connected to Neovim");
 };
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const handlePing: CommandHandler<"ping"> = (dispatcher, data) => {
-  dispatcher.sendEvent("pong", {});
+	dispatcher.sendEvent("pong", {});
 };
 
-export const handleAppendText: CommandHandler<"append_text"> = (
-  dispatcher,
-  data,
-) => {
-  // TODO: possible to insert where the users' cursor is?
-  // there's "pasteToEditor" but that doesn't let us do spacing particularly well...
-  let oldText = dispatcher.ctx.ui.getEditorText();
-  const joined = data.lines.join("\n");
+export const handleAppendText: CommandHandler<"append_text"> = (dispatcher, data) => {
+	// TODO: possible to insert where the users' cursor is?
+	// there's "pasteToEditor" but that doesn't let us do spacing particularly well...
+	let oldText = dispatcher.ctx.ui.getEditorText();
+	const joined = data.lines.join("\n");
 
-  let newText;
+	let newText;
 
-  if (data.as_paragraph) {
-    oldText = oldText.replace(/\n+$/, "");
-    if (!oldText.length) {
-      newText = joined;
-    } else {
-      newText = `${oldText}\n\n${joined}\n\n`;
-    }
-  } else {
-    if (!oldText.length) {
-      newText = joined;
-    } else if (oldText.endsWith(" ") || oldText.endsWith("\n")) {
-      newText = oldText + joined;
-    } else {
-      newText = oldText + " " + joined;
-    }
+	if (data.as_paragraph) {
+		oldText = oldText.replace(/\n+$/, "");
+		if (!oldText.length) {
+			newText = joined;
+		} else {
+			newText = `${oldText}\n\n${joined}\n\n`;
+		}
+	} else {
+		if (!oldText.length) {
+			newText = joined;
+		} else if (oldText.endsWith(" ") || oldText.endsWith("\n")) {
+			newText = oldText + joined;
+		} else {
+			newText = oldText + " " + joined;
+		}
 
-    if (!newText.endsWith(" ")) {
-      newText += " ";
-    }
-  }
+		if (!newText.endsWith(" ")) {
+			newText += " ";
+		}
+	}
 
-  dispatcher.ctx.ui.setEditorText(newText);
+	dispatcher.ctx.ui.setEditorText(newText);
 
-  // I don't really like this,
-  // but it forces a repaint which doesn't happen with setEditorText for some reason.
-  dispatcher.ctx.ui.notify("[pi-agent] Text appended");
+	// I don't really like this,
+	// but it forces a repaint which doesn't happen with setEditorText for some reason.
+	dispatcher.ctx.ui.notify("[pi-agent] Text appended");
 };
