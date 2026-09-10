@@ -124,6 +124,8 @@ function Pi.setup(opts)
 
 	Pi.set_handler("nvim_get_qflist", commands.nvim_get_qflist)
 	Pi.set_handler("nvim_set_qflist", commands.nvim_set_qflist)
+	Pi.set_handler("nvim_get_diagnostic_namespaces", commands.nvim_get_diagnostic_namespaces)
+	Pi.set_handler("nvim_get_diagnostics", commands.nvim_get_diagnostics)
 
 	Pi.add_listener("pong", events.pong)
 	Pi.add_listener("command_success", events.on_command_success)

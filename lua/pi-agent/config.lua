@@ -48,6 +48,14 @@ M.default_opts = {
 			enabled = true,
 			on_update = nil,
 		},
+
+		nvim_get_diagnostic_namespaces = {
+			enabled = true,
+		},
+
+		nvim_get_diagnostics = {
+			enabled = true,
+		},
 	},
 }
 

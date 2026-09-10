@@ -9,11 +9,19 @@ export type NvimCommands = {
       special_comment?: string;
     }[];
   };
+
+  nvim_get_diagnostic_namespaces: null;
+  nvim_get_diagnostics: {
+    namespace_id: number;
+  };
 };
 
 export type NvimCommandResults = {
   nvim_get_qflist: string[];
   nvim_set_qflist: number;
+
+  nvim_get_diagnostic_namespaces: { namespaces: Record<string, number> };
+  nvim_get_diagnostics: string[];
 };
 
 export type NvimEvents = {

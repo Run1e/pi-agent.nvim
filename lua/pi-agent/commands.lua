@@ -13,11 +13,11 @@ local M = {}
 ---@field entries pi_agent.commands.nvim_set_qflist_entry_data[]
 ---@field action "replace"|"append"
 
----@param _ nil
----@return string[]
-function M.nvim_get_qflist(pi, _)
+---@class pi_agent.commands.nvim_get_diagnostics_data
+---@field namespace_id integer?
+
+function format_qflist(list)
 	local out = {}
-	local list = vim.fn.getqflist()
 
 	for _, entry in ipairs(list) do
 		local buf_name = utils.get_buf_name(entry.bufnr)
@@ -26,6 +26,13 @@ function M.nvim_get_qflist(pi, _)
 	end
 
 	return out
+end
+
+---@param _ nil
+---@return string[]
+function M.nvim_get_qflist(pi, _)
+	local list = vim.fn.getqflist()
+	return format_qflist(list)
 end
 
 ---@param data pi_agent.commands.nvim_set_qflist_data
@@ -71,6 +78,31 @@ function M.nvim_set_qflist(pi, data)
 	end
 
 	return #vim.fn.getqflist()
+end
+
+---@param _ nil
+---@return table<integer, string>
+function M.nvim_get_diagnostic_namespaces(pi, _)
+	local out = { namespaces = {} }
+	local list = vim.diagnostic.get_namespaces()
+
+	for id, ns in pairs(list) do
+		out.namespaces[ns.name] = id
+	end
+
+	return out
+end
+
+---@param _ pi_agent.commands.nvim_get_diagnostics_data
+---@return string[]
+function M.nvim_get_diagnostics(pi, data)
+	local opts = {}
+	opts.namespace = data.namespace_id
+
+	local diagnostics = vim.diagnostic.get(nil, opts)
+	local qflist = vim.diagnostic.toqflist(diagnostics)
+
+	return format_qflist(qflist)
 end
 
 return M

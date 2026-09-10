@@ -75,7 +75,7 @@ function Server:send(data)
 
 	local ok, encoded = pcall(vim.json.encode, data)
 	if not ok then
-		utils.error("Failed to encode json data")
+		utils.error("Failed to encode json data: " .. encoded)
 		return
 	end
 

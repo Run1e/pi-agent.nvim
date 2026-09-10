@@ -88,4 +88,76 @@ export function registerTools(dispatcher: Dispatcher, enabledTools: string[]) {
       },
     });
   }
+
+  if (enabledTools.includes("nvim_get_diagnostic_namespaces")) {
+    pi.registerTool({
+      name: "nvim_get_diagnostic_namespaces",
+      label: "Neovim get diagnostic namespaces",
+      description: "Get a list of current lsp diagnostic namespaces.",
+      promptGuidelines: [
+        "Use nvim_get_diagnostic_namespaces before nvim_get_diagnostics so you know what namespace to use.",
+      ],
+      parameters: Type.Object({}),
+
+      async execute(_toolCallId, params, signal, onUpdate, ctx) {
+        const res = await dispatcher.sendCommand(
+          "nvim_get_diagnostic_namespaces",
+          null,
+        );
+
+        let text;
+        if (Object.keys(res.namespaces).length === 0) {
+          text = "No diagnostic namespaces";
+        } else {
+          text = Object.entries(res.namespaces)
+            .map(([name, id]) => `${name} has id ${id}`)
+            .join("\n");
+        }
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: text,
+            },
+          ],
+          details: {},
+        };
+      },
+    });
+  }
+
+  if (enabledTools.includes("nvim_get_diagnostics")) {
+    pi.registerTool({
+      name: "nvim_get_diagnostics",
+      label: "Neovim get diagnostic namespaces",
+      description: "Get a list of current lsp diagnostic namespaces.",
+      promptGuidelines: [
+        "Use nvim_get_diagnostics to get the LSP diagnostics for a namespace. A namespace is generally per LSP.",
+      ],
+      parameters: Type.Object({
+        namespace_id: Type.Integer({
+          description: "Namespace ID to get diagnostics for",
+        }),
+      }),
+
+      async execute(_toolCallId, params, signal, onUpdate, ctx) {
+        const res = await dispatcher.sendCommand(
+          "nvim_get_diagnostics",
+          params,
+        );
+        const output = res.length ? res.join("\n") : "No diagnostics";
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: output,
+            },
+          ],
+          details: {},
+        };
+      },
+    });
+  }
 }
