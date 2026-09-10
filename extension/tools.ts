@@ -14,6 +14,7 @@ export function registerTools(dispatcher: Dispatcher, enabledTools: string[]) {
       ],
       parameters: Type.Object({}),
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       async execute(_toolCallId, params, signal, onUpdate, ctx) {
         const res = await dispatcher.sendCommand("nvim_get_qflist", null);
         const output = res.length ? res.join("\n") : "Quickfix list is empty";
@@ -70,6 +71,7 @@ export function registerTools(dispatcher: Dispatcher, enabledTools: string[]) {
         ),
       }),
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       async execute(toolCallId, params, signal, onUpdate, ctx) {
         const entryCount: number = await dispatcher.sendCommand(
           "nvim_set_qflist",
@@ -99,6 +101,7 @@ export function registerTools(dispatcher: Dispatcher, enabledTools: string[]) {
       ],
       parameters: Type.Object({}),
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       async execute(_toolCallId, params, signal, onUpdate, ctx) {
         const res = await dispatcher.sendCommand(
           "nvim_get_diagnostic_namespaces",
@@ -130,22 +133,27 @@ export function registerTools(dispatcher: Dispatcher, enabledTools: string[]) {
   if (enabledTools.includes("nvim_get_diagnostics")) {
     pi.registerTool({
       name: "nvim_get_diagnostics",
-      label: "Neovim get diagnostic namespaces",
-      description: "Get a list of current lsp diagnostic namespaces.",
+      label: "Neovim get diagnostics",
+      description: "Get a list of LSP diagnostic messages by namespace id.",
       promptGuidelines: [
         "Use nvim_get_diagnostics to get the LSP diagnostics for a namespace. A namespace is generally per LSP.",
       ],
       parameters: Type.Object({
-        namespace_id: Type.Integer({
-          description: "Namespace ID to get diagnostics for",
-        }),
+        namespace_id: Type.Optional(
+          Type.Integer({
+            description:
+              "Namespace ID to get diagnostics for. Leave blank to get all diagnostics for all namespaces.",
+          }),
+        ),
       }),
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       async execute(_toolCallId, params, signal, onUpdate, ctx) {
         const res = await dispatcher.sendCommand(
           "nvim_get_diagnostics",
           params,
         );
+
         const output = res.length ? res.join("\n") : "No diagnostics";
 
         return {

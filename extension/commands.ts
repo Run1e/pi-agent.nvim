@@ -8,7 +8,7 @@ export type PiCommands = {
     events_blocking: string[];
   };
   append_text: { lines: string[]; as_paragraph: boolean };
-  ping: {};
+  ping: object;
 };
 
 export type PiCommand<K extends keyof PiCommands = keyof PiCommands> = {
@@ -18,7 +18,7 @@ export type PiCommand<K extends keyof PiCommands = keyof PiCommands> = {
 export type CommandHandler<K extends keyof PiCommands> = (
   dispatcher: Dispatcher,
   data: PiCommands[K],
-) => any;
+) => unknown;
 
 export const handleInit: CommandHandler<"init"> = (dispatcher, data) => {
   dispatcher.setInitData(data);
@@ -41,6 +41,7 @@ export const handleInit: CommandHandler<"init"> = (dispatcher, data) => {
   dispatcher.ctx.ui.notify("[pi-agent] Connected to Neovim");
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const handlePing: CommandHandler<"ping"> = (dispatcher, data) => {
   dispatcher.sendEvent("pong", {});
 };
@@ -54,7 +55,7 @@ export const handleAppendText: CommandHandler<"append_text"> = (
   let oldText = dispatcher.ctx.ui.getEditorText();
   const joined = data.lines.join("\n");
 
-  let newText = "";
+  let newText;
 
   if (data.as_paragraph) {
     oldText = oldText.replace(/\n+$/, "");

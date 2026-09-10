@@ -20,7 +20,7 @@ type Message = {
   correlation_id: number;
   type: "command" | "event";
   name: string;
-  data: any;
+  data: unknown;
 };
 
 export type EventData = {
@@ -73,7 +73,7 @@ export class Dispatcher {
 
   initSession() {
     if (!this.initData) {
-      throw new Error("Can't register tools without init data");
+      throw new Error("Can't init session without init data");
     }
 
     registerTools(this, this.initData.enabled_tools);
@@ -170,7 +170,7 @@ export class Dispatcher {
           let msg: unknown;
           try {
             msg = JSON.parse(line);
-          } catch (e) {
+          } catch {
             continue;
           }
 
@@ -250,7 +250,7 @@ export class Dispatcher {
     }).finally(() => {
       try {
         unsubscribe();
-      } catch (e) {
+      } catch {
         //
       }
 
@@ -291,7 +291,7 @@ export class Dispatcher {
     ]).then((data) => data.value);
   }
 
-  sendEvent(name: string, data: any) {
+  sendEvent(name: string, data: unknown) {
     if (!this.isReady()) {
       return;
     }
@@ -319,14 +319,14 @@ export class Dispatcher {
       }
 
       value = await handler(this, command.data);
-    } catch (e: any) {
+    } catch (e) {
       this.sendData({
         type: "event",
         name: "command_failure",
         correlation_id: command.correlation_id,
         data: {
           correlation_id: command.correlation_id,
-          error: e?.message ?? String(e),
+          error: e instanceof Error ? e.message : String(e),
         },
       });
       return;
@@ -350,9 +350,9 @@ export class Dispatcher {
     for (const listener of listeners) {
       try {
         listener(this, event.data);
-      } catch (e: any) {
+      } catch (e) {
         this.ctx.ui.notify(
-          `[pi-agent] Listener for event '${event.name}' threw: ${e?.message ?? String(e)}`,
+          `[pi-agent] Listener for event '${event.name}' threw: ${e instanceof Error ? e.message : String(e)}`,
         );
         continue;
       }
@@ -381,7 +381,7 @@ export class Dispatcher {
     if (this.isCommand(msg)) {
       this.handleCommand(msg).catch((e) => {
         this.ctx.ui.notify(
-          `Handler for command '${msg.name}' threw: ${e?.message ?? String(e)}`,
+          `Handler for command '${msg.name}' threw: ${e instanceof Error ? e.message : String(e)}`,
         );
       });
     } else if (this.isEvent(msg)) {

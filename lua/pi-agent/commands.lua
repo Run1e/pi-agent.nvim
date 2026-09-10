@@ -16,7 +16,7 @@ local M = {}
 ---@class pi_agent.commands.nvim_get_diagnostics_data
 ---@field namespace_id integer?
 
-function format_qflist(list)
+local function format_qflist(list)
 	local out = {}
 
 	for _, entry in ipairs(list) do
@@ -81,12 +81,13 @@ function M.nvim_set_qflist(pi, data)
 end
 
 ---@param _ nil
----@return table<integer, string>
+---@return table<string, table<string, integer>>
 function M.nvim_get_diagnostic_namespaces(pi, _)
 	local out = { namespaces = {} }
 	local list = vim.diagnostic.get_namespaces()
 
 	for id, ns in pairs(list) do
+		-- TODO: should we guard by ns.disabled?
 		out.namespaces[ns.name] = id
 	end
 

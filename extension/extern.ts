@@ -12,7 +12,7 @@ export type NvimCommands = {
 
   nvim_get_diagnostic_namespaces: null;
   nvim_get_diagnostics: {
-    namespace_id: number;
+    namespace_id?: number;
   };
 };
 
@@ -25,7 +25,7 @@ export type NvimCommandResults = {
 };
 
 export type NvimEvents = {
-  command_success: { correlation_id: number; value: any };
+  command_success: { correlation_id: number; value: unknown };
   command_failure: { correlation_id: number; error: string };
   register_event_interest: {
     event_name: string;
@@ -33,7 +33,7 @@ export type NvimEvents = {
   };
   pi_event_response: {
     correlation_id: number;
-    result?: any;
+    result?: unknown;
     error?: string;
   };
 };

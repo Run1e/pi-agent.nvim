@@ -29,6 +29,7 @@ export default function (pi: ExtensionAPI) {
     }
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   pi.on("session_shutdown", async (event, ctx) => {
     if (event.reason === "quit") {
       return;

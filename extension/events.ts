@@ -15,7 +15,7 @@ export const listenRegisterEventInterest: EventListener<
   if (!ed.registeredListeners.has(data.event_name)) {
     const castedOn = dispatcher.pi.on as (
       event: string,
-      handler: (event: any) => unknown,
+      handler: (event: unknown) => unknown,
     ) => void;
 
     castedOn(data.event_name, async (event) => {
@@ -45,7 +45,7 @@ export const listenRegisterEventInterest: EventListener<
         let piEventResponse: NvimEvents["pi_event_response"];
         try {
           piEventResponse = await p;
-        } catch (e) {
+        } catch {
           dispatcher.ctx.ui.notify(
             `[pi-agent] Timed out waiting for blocking result for event '${data.event_name}'`,
           );
