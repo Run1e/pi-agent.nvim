@@ -39,7 +39,7 @@ export const handleInit: CommandHandler<"init"> = (dispatcher, data) => {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const handlePing: CommandHandler<"ping"> = (dispatcher, data) => {
+export const handlePing: CommandHandler<"ping"> = (dispatcher, _) => {
 	dispatcher.sendEvent("pong", {});
 };
 
