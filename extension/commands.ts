@@ -1,6 +1,5 @@
 import { Dispatcher } from "./dispatcher";
 import { listenRegisterEventInterest } from "./events";
-import { registerTools } from "./tools";
 
 export type PiCommands = {
   init: {
