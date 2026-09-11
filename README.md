@@ -62,7 +62,7 @@ You can paste text to your in-progress pi message/prompt in multiple ways:
 | Method | Description |
 | - | - |
 | `paste_cursor_location()` | paste current cursor location (`file:linenum`) |
-| `paste_selection_location()` | paste current selection location (`file:startline-endline`) |
+| `paste_selection_location()` | paste current selection range (`file:startline-endline`) |
 | `paste_selection_contents()` | paste current selection contents |
 | `paste_qflist()` | paste quickfix list |
 
