@@ -192,6 +192,14 @@ require("pi-agent").setup({
 			-- called when the qflist is updated
 			on_update = nil,
 		},
+
+		nvim_get_diagnostic_namespaces = {
+			enabled = true,
+		},
+
+		nvim_get_diagnostics = {
+			enabled = true,
+		},
 	},
 })
 ```
