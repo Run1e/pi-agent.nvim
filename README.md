@@ -29,6 +29,14 @@ Try asking:
 - `review last commit and put issues in my qflist`
 - `find all instances of exception swallowing and put them in my qflist`
 
+#### `nvim_get_diagnostics`
+
+Let your agent read LSP diagnostics directly from Neovim
+
+Try asking:
+- `get my lua diagnostics`
+- `add eslint-disable-next-line above each unused-vars diagnostic`
+
 ### 📡 Listen to events
 
 Listen to arbitrary [pi events](https://pi.dev/docs/latest/extensions#events) in Neovim:
