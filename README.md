@@ -31,7 +31,7 @@ Try asking:
 
 #### `nvim_get_diagnostics`
 
-Let your agent read LSP diagnostics directly from Neovim
+Let your agent read LSP diagnostics directly from Neovim.
 
 Try asking:
 - `get my lua diagnostics`
