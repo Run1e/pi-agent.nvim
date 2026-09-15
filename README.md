@@ -97,7 +97,7 @@ To set a specific surface, for example [herdr](https://herdr.dev/):
 ```lua
 local pi = require("pi-agent")
 pi.setup({
-    surface = pi.get_surface("herdr")
+    surface = pi.get_surface("herdr") -- or "nvim" or "tmux"
 })
 ```
 
