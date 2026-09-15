@@ -109,13 +109,15 @@ pi-agent ships with no default keymaps.
 
 Here's a list of recommended defaults to get you started:
 ```lua
-vim.keymap.set("n", "<leader>as", pi.start, { desc = "pi: Start" })
-vim.keymap.set("n", "<leader>af", pi.focus, { desc = "pi: Focus" })
-vim.keymap.set("n", "<leader>ac", pi.close, { desc = "pi: Close" })
-vim.keymap.set({ "n", "x" }, "<leader>al", pi.paste_cursor_location, { desc = "pi: Paste cursor location" })
-vim.keymap.set({ "n", "x" }, "<leader>ar", pi.paste_selection_location, { desc = "pi: Paste range location" })
-vim.keymap.set({ "n", "x" }, "<leader>ap", pi.paste_selection_contents, { desc = "pi: Paste selection contents" })
+vim.keymap.set("n", "<leader>as", pi.start, { desc = "pi: Start", noremap = true, silent = true })
+vim.keymap.set("n", "<leader>af", pi.focus, { desc = "pi: Focus", noremap = true, silent = true })
+vim.keymap.set("n", "<leader>ac", pi.close, { desc = "pi: Close", noremap = true, silent = true })
+vim.keymap.set({ "n", "x" }, "<leader>al", pi.paste_cursor_location, { desc = "pi: Paste cursor location", noremap = true, silent = true })
+vim.keymap.set({ "n", "x" }, "<leader>ar", pi.paste_selection_location, { desc = "pi: Paste range location", noremap = true, silent = true })
+vim.keymap.set({ "n", "x" }, "<leader>ap", pi.paste_selection_contents, { desc = "pi: Paste selection contents", noremap = true, silent = true })
 ```
+
+❗ Confused about how to navigate off the pi window? See [here](#ergonomic-window-navigation).
 
 See [Methods](#methods) for other functionality you can map.
 
@@ -260,6 +262,35 @@ Surface implementations are just Lua modules, so you can provide your own shaped
 ```
 
 ## Recipes
+
+### Ergonomic window navigation
+
+If you're using the `nvim` surface, you're running pi in a terminal buffer.
+Read more about input in terminal mode [here](https://neovim.io/doc/user/terminal/#terminal-input).
+The tl;dr is to press `<C-\><C-N>` to exit terminal mode.
+
+You can set up ctrl+h/j/k/l to navigate between windows instead:
+```lua
+vim.keymap.set("n", "<C-h>", "<C-w>h", { desc = "Navigate left", noremap = true, silent = true })
+vim.keymap.set("n", "<C-j>", "<C-w>j", { desc = "Navigate down", noremap = true, silent = true })
+vim.keymap.set("n", "<C-k>", "<C-w>k", { desc = "Navigate up", noremap = true, silent = true })
+vim.keymap.set("n", "<C-l>", "<C-w>l", { desc = "Navigate right", noremap = true, silent = true })
+vim.keymap.set("t", "<C-h>", [[<C-\><C-N><C-w>h]], { desc = "Navigate left", noremap = true, silent = true })
+vim.keymap.set("t", "<C-j>", [[<C-\><C-N><C-w>j]], { desc = "Navigate down", noremap = true, silent = true })
+vim.keymap.set("t", "<C-k>", [[<C-\><C-N><C-w>k]], { desc = "Navigate up", noremap = true, silent = true })
+vim.keymap.set("t", "<C-l>", [[<C-\><C-N><C-w>l]], { desc = "Navigate right", noremap = true, silent = true })
+```
+
+### Exit terminal mode on escape
+
+You can also make Escape exit terminal mode into normal mode similarly to insert/visual mode:
+```lua
+vim.keymap.set("t", "<esc>", function()
+	vim.cmd("stopinsert")
+end, { desc = "Exit terminal mode", noremap = true, silent = true })
+```
+
+You can use ctrl+escape or alt+escape to sent a literal escape key to the terminal.
 
 ### Automatically focus on successful commands
 
