@@ -290,7 +290,7 @@ vim.keymap.set("t", "<esc>", function()
 end, { desc = "Exit terminal mode", noremap = true, silent = true })
 ```
 
-You can use ctrl+escape or alt+escape to sent a literal escape key to the terminal.
+You can use ctrl+escape or alt+escape to send a literal escape key to the terminal.
 
 ### Automatically focus on successful commands
 
