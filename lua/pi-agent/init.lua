@@ -142,12 +142,14 @@ function Pi.start()
 		return
 	end
 
+	local opts = config.get_opts()
+
 	-- validate the surface. if it fails, default to nvim surface
-	local ok, err = pcall(config.get_opts().surface.validate)
+	local ok, err = pcall(opts.surface.validate)
 	if not ok then
 		utils.error(string.format("Surface failed to validate: %s", err))
 		utils.error("Defaulting to 'nvim' surface")
-		config.get_opts().surface = require("pi-agent.surfaces.nvim")
+		opts.surface = require("pi-agent.surfaces.nvim")
 	end
 
 	local session_name = utils.make_session_name()
@@ -162,7 +164,6 @@ function Pi.start()
 
 	Pi.server = server.new(socket_path, Pi.on_connect, Pi.on_disconnect, Pi.on_message)
 
-	local opts = config.get_opts()
 	opts.surface.open(Pi)
 
 	if opts.focus_on_open then
