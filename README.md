@@ -271,6 +271,9 @@ Surface implementations are just Lua modules, so you can provide your own shaped
 
 	-- "right" | "down" -- which way to split (pane mode only)
 	split = "right",
+
+    -- whether to add the -f flag when open_in == "pane"
+    pane_span_window = true,
 }
 ```
 

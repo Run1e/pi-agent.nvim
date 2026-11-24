@@ -7,12 +7,14 @@ local M = {}
 ---@field tmux_bin string
 ---@field open_in "window"|"pane"
 ---@field split "right"|"down"
+---@field pane_span_window boolean
 
 ---@type pi_agent.surfaces.tmux.Opts
 M.default_opts = {
 	tmux_bin = "tmux",
 	open_in = "window",
 	split = "right",
+	pane_span_window = true,
 }
 
 ---@type pi_agent.surfaces.tmux.Opts
@@ -67,6 +69,9 @@ function M.open(pi)
 	local create_cmd, create_err
 	if M.opts.open_in == "pane" then
 		create_cmd = { "split-window" }
+		if M.opts.pane_span_window then
+			table.insert(create_cmd, "-f")
+		end
 		if M.opts.split == "right" then
 			table.insert(create_cmd, "-h")
 		end
