@@ -12,7 +12,7 @@ Pragmatic integration between Neovim and the [pi agent harness](https://pi.dev/)
 
 ## ✨ Features
 
-- Open pi inside a Neovim window/tab, or in a new terminal multiplexer tab (tmux/herdr)
+- Open pi inside a Neovim window/tab, or in a new terminal multiplexer tab/pane (tmux/herdr)
 - Send context directly from Neovim; cursor/selection locations, selection contents, etc
 - Let your agent read and edit the quickfix list via tools (`nvim_get_qflist`, `nvim_set_qflist`)
 - Trigger Lua functions on [pi events](https://pi.dev/docs/latest/extensions#events): `pi.on("agent_settled", function() ... end)`
@@ -272,8 +272,8 @@ Surface implementations are just Lua modules, so you can provide your own shaped
 	-- "right" | "down" -- which way to split (pane mode only)
 	split = "right",
 
-    -- whether to add the -f flag when open_in == "pane"
-    pane_span_window = true,
+	-- whether to add the -f flag when open_in == "pane"
+	pane_span_window = true,
 }
 ```
 
@@ -336,11 +336,12 @@ pi.setup({
 
 ### Sending arbitrary text to pi
 
-Part of the internal API, subject to change.
-
 ```lua
-pi.send(cb or nil, "command", "append_text", { lines = { "list", "of", "lines" }, as_paragraph = false})
+pi.append_text(cb, "some text", false)
 ```
+
+`cb` is optional but useful for handling errors.
+If inserting as a paragraph, set the third argument to `true`.
 
 ## Planned
 
