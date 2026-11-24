@@ -249,6 +249,12 @@ Surface implementations are just Lua modules, so you can provide your own shaped
 {
 	-- set a custom herdr binary
 	herdr_bin = "herdr",
+
+	-- "tab" | "pane" -- where to open pi
+	open_in = "tab",
+
+	-- "right" | "down" -- which way to split (pane mode only)
+	split = "right",
 }
 ```
 
@@ -258,9 +264,12 @@ Surface implementations are just Lua modules, so you can provide your own shaped
 {
 	-- set a custom tmux binary path
 	tmux_bin = "tmux",
-	
-	-- "window" | "vsplit" | "split"
-	open_in = "window"
+
+	-- "window" | "pane" -- where to open pi
+	open_in = "window",
+
+	-- "right" | "down" -- which way to split (pane mode only)
+	split = "right",
 }
 ```
 

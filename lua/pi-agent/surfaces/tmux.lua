@@ -5,12 +5,14 @@ local M = {}
 
 ---@class pi_agent.surfaces.tmux.Opts
 ---@field tmux_bin string
----@field open_in "window"|"split"|"vsplit"
+---@field open_in "window"|"pane"
+---@field split "right"|"down"
 
 ---@type pi_agent.surfaces.tmux.Opts
 M.default_opts = {
 	tmux_bin = "tmux",
 	open_in = "window",
+	split = "right",
 }
 
 ---@type pi_agent.surfaces.tmux.Opts
@@ -63,9 +65,9 @@ function M.open(pi)
 	M.pane_id = nil
 
 	local create_cmd, create_err
-	if M.opts.open_in == "split" or M.opts.open_in == "vsplit" then
+	if M.opts.open_in == "pane" then
 		create_cmd = { "split-window" }
-		if M.opts.open_in == "vsplit" then
+		if M.opts.split == "right" then
 			table.insert(create_cmd, "-h")
 		end
 		create_err = "Failed to create tmux pane: "
@@ -137,8 +139,8 @@ function M.focus()
 		utils.raise("tmux window focus failed: " .. err)
 	end
 
-	-- also focus on the pane in the case of split/vsplit
-	if M.opts.open_in == "split" or M.opts.open_in == "vsplit" then
+	-- also focus on the pane in the case of open_in="pane"
+	if M.opts.open_in == "pane" then
 		ok, err = pcall(tmux_run, { "select-pane", "-t", M.pane_id })
 		if not ok then
 			utils.raise("tmux pane focus failed: " .. err)

@@ -5,8 +5,9 @@ local M = {}
 
 ---@class pi_agent.surfaces.herdr.Opts
 ---@field herdr_bin string
+---@field open_in "tab"|"pane"
+---@field split "right"|"down"
 
----Result of a herdr CLI invocation.
 ---@class pi_agent.surfaces.herdr.CommandResult
 ---@field error { message: string }?
 ---@field result table?
@@ -14,6 +15,8 @@ local M = {}
 ---@type pi_agent.surfaces.herdr.Opts
 M.default_opts = {
 	herdr_bin = "herdr",
+	open_in = "tab",
+	split = "right",
 }
 
 ---@type pi_agent.surfaces.herdr.Opts
@@ -25,7 +28,6 @@ M.tab_id = nil
 ---@type string?
 M.pane_id = nil
 
----Run a herdr CLI subcommand and decode its JSON output.
 ---@param args string[]
 ---@return pi_agent.surfaces.herdr.CommandResult
 local function herdr_run(args)
@@ -81,17 +83,50 @@ function M.open(pi)
 	M.tab_id = nil
 	M.pane_id = nil
 
-	local data = herdr_run({ "tab", "create", "--cwd", vim.fn.getcwd() })
-	if data.error then
-		utils.raise("Failed to create herdr tab: " .. data.error.message)
-	end
+	local data
+	if M.opts.open_in == "pane" then
+		local current = herdr_run({ "pane", "current", "--current" })
+		if current.error or not current.result or not current.result.pane then
+			utils.raise(
+				"Failed to get current herdr pane: " .. (current.error and current.error.message or "no pane in result")
+			)
+		end
 
-	if not data.result or not data.result.root_pane then
-		utils.raise("Failed to create Herdr tab")
-	end
+		-- herdr has no way to focus a pane by id later, so focus the new pane now
+		data = herdr_run({
+			"pane",
+			"split",
+			current.result.pane.pane_id,
+			"--direction",
+			M.opts.split,
+			"--cwd",
+			vim.fn.getcwd(),
+			"--focus",
+		})
 
-	M.tab_id = data.result.tab.tab_id
-	M.pane_id = data.result.root_pane.pane_id
+		if data.error then
+			utils.raise("Failed to split herdr pane: " .. data.error.message)
+		end
+
+		if not data.result or not data.result.pane then
+			utils.raise("Failed to split herdr pane")
+		end
+
+		M.tab_id = data.result.pane.tab_id
+		M.pane_id = data.result.pane.pane_id
+	else
+		data = herdr_run({ "tab", "create", "--cwd", vim.fn.getcwd() })
+		if data.error then
+			utils.raise("Failed to create herdr tab: " .. data.error.message)
+		end
+
+		if not data.result or not data.result.root_pane then
+			utils.raise("Failed to create Herdr tab")
+		end
+
+		M.tab_id = data.result.tab.tab_id
+		M.pane_id = data.result.root_pane.pane_id
+	end
 
 	---@type string[]
 	local cmd = {
@@ -109,16 +144,17 @@ function M.open(pi)
 end
 
 function M.close()
-	-- this will kill the pi instance if it's still running there? do we even want that?
-	-- I mean it's kind of semantically what close would mean in this situation
-	if M.tab_id == nil then
+	-- only close the pane we created; if it is the last pane in its tab,
+	-- herdr closes the tab as a side effect, but any other panes survive
+	if M.pane_id == nil then
 		return
 	end
 
-	local data = herdr_run({ "tab", "close", M.tab_id })
+	local data = herdr_run({ "pane", "close", M.pane_id })
 
 	if data.error then
-		utils.raise("Failed to close herdr tab: " .. data.error.message)
+		-- the pane may have been closed manually already; nothing left to do
+		utils.warn("Failed to close herdr pane (it may already be closed): " .. data.error.message)
 	end
 
 	M.tab_id = nil
@@ -130,6 +166,7 @@ function M.focus()
 		utils.raise("No herdr tab or pane id")
 	end
 
+	-- tab-level only: the herdr CLI has no way to focus a pane by id
 	local data = herdr_run({ "tab", "focus", M.tab_id })
 
 	if data.error then
