@@ -142,6 +142,14 @@ function Pi.start()
 		return
 	end
 
+	-- validate the surface. if it fails, default to nvim surface
+	local ok, err = pcall(config.get_opts().surface.validate)
+	if not ok then
+		utils.error(string.format("Surface failed to validate: %s", err))
+		utils.error("Defaulting to 'nvim' surface")
+		config.get_opts().surface = require("pi-agent.surfaces.nvim")
+	end
+
 	local session_name = utils.make_session_name()
 	Pi.session_name = session_name
 

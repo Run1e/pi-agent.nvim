@@ -79,13 +79,6 @@ function M.setup(opts)
 	-- default to nvim surface
 	if M._opts.surface == nil then
 		M._opts.surface = default_surface
-	else
-		local ok, err = pcall(M.get_opts().surface.validate)
-		if not ok then
-			utils.error(string.format("Surface failed to validate with error: %s.", err))
-			utils.error("Defaulting to 'nvim' surface.")
-			M._opts.surface = default_surface
-		end
 	end
 end
 
