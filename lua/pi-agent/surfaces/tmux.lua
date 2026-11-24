@@ -5,10 +5,12 @@ local M = {}
 
 ---@class pi_agent.surfaces.tmux.Opts
 ---@field tmux_bin string
+---@field open_in "window"|"split"|"vsplit"
 
 ---@type pi_agent.surfaces.tmux.Opts
 M.default_opts = {
 	tmux_bin = "tmux",
+	open_in = "window",
 }
 
 ---@type pi_agent.surfaces.tmux.Opts
@@ -60,24 +62,38 @@ function M.open(pi)
 	M.window_id = nil
 	M.pane_id = nil
 
-	local ok, out = pcall(tmux_run, {
-		"new-window",
-		"-d",
-		"-P",
-		"-F",
-		"#{window_id} #{pane_id}",
-		"-c",
-		vim.fn.getcwd(),
-	})
+	local create_cmd, create_err
+	if M.opts.open_in == "split" or M.opts.open_in == "vsplit" then
+		create_cmd = { "split-window" }
+		if M.opts.open_in == "vsplit" then
+			table.insert(create_cmd, "-h")
+		end
+		create_err = "Failed to create tmux pane: "
+	else
+		create_cmd = { "new-window" }
+		create_err = "Failed to create tmux window: "
+	end
+
+	local ok, out = pcall(
+		tmux_run,
+		vim.list_extend(create_cmd, {
+			"-d",
+			"-P",
+			"-F",
+			"#{window_id} #{pane_id}",
+			"-c",
+			vim.fn.getcwd(),
+		})
+	)
 
 	if not ok then
-		utils.raise("Failed to create tmux window: " .. out)
+		utils.raise(create_err .. out)
 	end
 
 	local parts = vim.split(out:gsub("%s+$", ""), " ", { trimempty = true })
 
 	if not parts[1] or not parts[2] then
-		utils.raise("Failed to parse window/pane ids from tmux new-window output: " .. out)
+		utils.raise("Failed to parse window/pane ids from tmux output: " .. out)
 	end
 
 	M.window_id = parts[1]
@@ -93,14 +109,18 @@ function M.open(pi)
 end
 
 function M.close()
-	if M.window_id == nil then
+	if M.pane_id == nil then
 		return
 	end
 
-	local ok, err = pcall(tmux_run, { "kill-window", "-t", M.window_id })
+	-- even if we have open_in="window", only close the pane.
+	-- the user might have opened additional panes in the window
+	-- and we don't want to do a blind kill-window
+	local ok, err = pcall(tmux_run, { "kill-pane", "-t", M.pane_id })
 
 	if not ok then
-		utils.raise("Failed to close tmux window: " .. err)
+		-- The pane may have been closed manually already; nothing left to do.
+		utils.warn("Failed to kill tmux pane (it may already be closed): " .. err)
 	end
 
 	M.window_id = nil
@@ -113,9 +133,16 @@ function M.focus()
 	end
 
 	local ok, err = pcall(tmux_run, { "select-window", "-t", M.window_id })
-
 	if not ok then
 		utils.raise("tmux window focus failed: " .. err)
+	end
+
+	-- also focus on the pane in the case of split/vsplit
+	if M.opts.open_in == "split" or M.opts.open_in == "vsplit" then
+		ok, err = pcall(tmux_run, { "select-pane", "-t", M.pane_id })
+		if not ok then
+			utils.raise("tmux pane focus failed: " .. err)
+		end
 	end
 end
 

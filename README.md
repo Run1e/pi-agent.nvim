@@ -258,6 +258,9 @@ Surface implementations are just Lua modules, so you can provide your own shaped
 {
 	-- set a custom tmux binary path
 	tmux_bin = "tmux",
+	
+	-- "window" | "vsplit" | "split"
+	open_in = "window"
 }
 ```
 
@@ -328,8 +331,6 @@ pi.send(cb or nil, "command", "append_text", { lines = { "list", "of", "lines" }
 
 ## Planned
 
-- LSP tools (`nvim_get_diagnostics`)
 - Compose pi messages in a Neovim scratch buffer
 - Support for more surfaces like cmux and zellij
-- I did experiment with tools for marks/registers but they proved to be relatively useless?
 
