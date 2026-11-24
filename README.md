@@ -161,6 +161,7 @@ over the socket.
 | **paste_selection_location**(cb) | Paste range location (`file:startline-endline`) into pi prompt |
 | **paste_selection_contents**(cb) | Paste the current selection contents into your pi prompt |
 | **paste_qflist**(cb) | Paste your quickfix list into pi prompt |
+| **append_text**(cb, text, as_paragraph) | Append arbitrary text into pi prompt |
 | **close**(cb) | Close the window/tab pi is running in (will kill pi process unless surface is nvim) |
 | **stop**() | Stop the socket server |
 

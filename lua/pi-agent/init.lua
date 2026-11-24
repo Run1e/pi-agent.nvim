@@ -547,4 +547,12 @@ function Pi.paste_qflist(cb)
 	Pi.send(cb, "command", "append_text", { lines = lines, as_paragraph = true })
 end
 
+---@param cb pi_agent.Callback?
+---@param text string
+---@param as_paragraph boolean
+function Pi.append_text(cb, text, as_paragraph)
+	local lines = vim.split(text, "\n")
+	Pi.send(cb, "command", "append_text", { lines = lines, as_paragraph = as_paragraph })
+end
+
 return Pi
